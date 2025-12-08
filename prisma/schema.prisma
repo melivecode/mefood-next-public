@@ -1,0 +1,367 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  
+  // Authentication fields
+  email         String    @unique
+  password      String?
+  emailVerified DateTime?
+  
+  // User profile
+  ownerName     String?   // Restaurant owner's name
+  ownerImage    String?
+  
+  // Restaurant information (merged from Restaurant model)
+  restaurantName        String?
+  restaurantDescription String?
+  restaurantAddress     String?
+  restaurantPhone       String?
+  restaurantEmail       String?
+  isRestaurantActive    Boolean  @default(true)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  accounts        Account[]
+  sessions        Session[]
+  categories      Category[]
+  menuItems       MenuItem[]
+  orders          Order[] @relation("UserOrders")
+  tables          Table[]
+  customerSessions CustomerSession[] @relation("UserSessions")
+  payments        Payment[]
+  settings        RestaurantSettings?
+  
+  // Staff relations (for future multi-staff support)
+  waitingSessions CustomerSession[] @relation("WaiterSessions")
+  waitingOrders   Order[] @relation("OrderWaiter")
+  cookingOrders   Order[] @relation("OrderCook")  
+  servedOrders    Order[] @relation("OrderServer")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Table Management Model
+model Table {
+  id           String     @id @default(cuid())
+  number       String     // Table number (e.g., "1", "A1", "VIP-01")
+  name         String?    // Optional table name (e.g., "Window seat", "VIP table")
+  capacity     Int        @default(4) // Number of guests the table can accommodate
+  isActive     Boolean    @default(true)
+  sortOrder    Int        @default(0) // Order for table display and management
+  qrCode       String?    // QR code for table ordering
+  // Grid layout position fields
+  gridX        Int        @default(0)  // Grid column position (0-11)
+  gridY        Int        @default(0)  // Grid row position
+  gridWidth    Int        @default(2)  // Width in grid units
+  gridHeight   Int        @default(2)  // Height in grid units
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders       Order[]
+  sessions     CustomerSession[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([userId, number])
+}
+
+// Menu Management Models
+model Category {
+  id           String     @id @default(cuid())
+  name         String
+  description  String?
+  isActive     Boolean    @default(true)
+  sortOrder    Int        @default(0)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  menuItems    MenuItem[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([userId, name])
+}
+
+model MenuItem {
+  id           String     @id @default(cuid())
+  name         String
+  description  String?
+  price        Decimal    @db.Decimal(10, 2)
+  image        String?
+  isActive     Boolean    @default(true)
+  isAvailable  Boolean    @default(true)
+  sortOrder    Int        @default(0)
+  userId       String
+  categoryId   String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category     Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  orderItems   OrderItem[]
+  selections   Selection[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Selection {
+  id           String           @id @default(cuid())
+  name         String           // e.g., "Size", "Toppings", "Add-ons"
+  description  String?
+  isRequired   Boolean          @default(false)
+  allowMultiple Boolean         @default(false) // true for multiple selection, false for single
+  sortOrder    Int              @default(0)
+  menuItemId   String
+  menuItem     MenuItem         @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  options      SelectionOption[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+model SelectionOption {
+  id          String    @id @default(cuid())
+  name        String    // e.g., "Small", "Large", "Extra Cheese"
+  description String?
+  priceAdd    Decimal   @db.Decimal(10, 2) @default(0) // additional price
+  isAvailable Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  selectionId String
+  selection   Selection @relation(fields: [selectionId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// Customer Session Management
+model CustomerSession {
+  id           String            @id @default(cuid())
+  customerName String?
+  customerPhone String?
+  customerEmail String?
+  partySize    Int               @default(1)
+  status       SessionStatus     @default(WAITING)
+  tableId      String?
+  userId       String
+  waiterId     String?           // Staff member handling the table
+  checkInTime  DateTime          @default(now())
+  seatedTime   DateTime?
+  checkOutTime DateTime?
+  notes        String?
+  user         User              @relation("UserSessions", fields: [userId], references: [id], onDelete: Cascade)
+  table        Table?            @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  waiter       User?             @relation("WaiterSessions", fields: [waiterId], references: [id], onDelete: SetNull)
+  orders       Order[]
+  payments     Payment[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+enum SessionStatus {
+  WAITING       // Customer checked in, waiting for table
+  SEATED        // Customer seated at table
+  ORDERING      // Taking order
+  ORDERED       // Order placed, kitchen preparing
+  SERVING       // Food being served
+  DINING        // Customer dining
+  BILLING       // Ready for bill
+  COMPLETED     // Session completed, customer left
+  CANCELLED     // Session cancelled
+}
+
+// Order Management Models
+model Order {
+  id             String         @id @default(cuid())
+  orderNumber    String         // Removed @unique constraint
+  subOrderNumber String?        // Sub-order number (e.g., "01", "02", etc.)
+  mainOrderId    String?        // Reference to the main order if this is a sub-order
+  mainOrder      Order?         @relation("MainSubOrders", fields: [mainOrderId], references: [id], onDelete: SetNull)
+  subOrders      Order[]        @relation("MainSubOrders")
+  status         OrderStatus    @default(PENDING)
+  totalAmount    Decimal        @db.Decimal(10, 2)
+  customerName   String?
+  customerPhone  String?
+  customerEmail  String?
+  notes          String?
+  tableId        String?        // Optional table for dine-in orders
+  sessionId      String?        // Link to customer session
+  userId         String
+  waiterId       String?        // Staff member who took the order
+  cookId         String?        // Kitchen staff assigned to prepare
+  servedBy       String?        // Staff member who served the order
+  orderedAt      DateTime       @default(now())
+  preparingAt    DateTime?      // When kitchen started preparing
+  readyAt        DateTime?      // When order is ready to serve
+  servedAt       DateTime?      // When order was served
+  user           User           @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
+  table          Table?         @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  session        CustomerSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  waiter         User?          @relation("OrderWaiter", fields: [waiterId], references: [id], onDelete: SetNull)
+  cook           User?          @relation("OrderCook", fields: [cookId], references: [id], onDelete: SetNull)
+  server         User?          @relation("OrderServer", fields: [servedBy], references: [id], onDelete: SetNull)
+  items          OrderItem[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  quantity   Int
+  price      Decimal  @db.Decimal(10, 2)
+  notes      String?  @db.Text
+  selections Json?    // Store selected options as JSON
+  orderId    String
+  menuItemId String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum OrderStatus {
+  PENDING       // Order created, waiting for confirmation
+  CONFIRMED     // Order confirmed, sent to kitchen
+  PREPARING     // Kitchen is preparing the order
+  READY         // Order ready for serving
+  SERVING       // Order being served to customer
+  DELIVERED     // Order delivered to customer
+  COMPLETED     // Order completed and paid
+  CANCELLED     // Order cancelled
+}
+
+// Payment/Billing Management Models
+model Payment {
+  id                String            @id @default(cuid())
+  paymentNumber     String            // Unique payment/receipt number
+  sessionId         String            // Reference to customer session
+  userId            String
+  
+  // Session and table snapshot data (copied at payment time)
+  customerName      String?
+  customerPhone     String?
+  customerEmail     String?
+  partySize         Int
+  tableNumber       String            // Table number at payment time
+  tableName         String?           // Table name at payment time
+  checkInTime       DateTime
+  checkOutTime      DateTime
+  
+  // Restaurant snapshot data
+  restaurantName    String            // Restaurant name at payment time
+  restaurantAddress String?           // Restaurant address at payment time
+  restaurantPhone   String?           // Restaurant phone at payment time
+  
+  // Payment details
+  paymentMethod     PaymentMethod     @default(CASH)
+  subtotalAmount    Decimal           @db.Decimal(10, 2) // Total of all items
+  discountAmount    Decimal           @db.Decimal(10, 2) @default(0)
+  extraChargesAmount Decimal          @db.Decimal(10, 2) @default(0)
+  finalAmount       Decimal           @db.Decimal(10, 2) // Amount after charges/discounts
+  receivedAmount    Decimal?          @db.Decimal(10, 2) // For cash payments
+  changeAmount      Decimal?          @db.Decimal(10, 2) // For cash payments
+  
+  // Additional data
+  notes             String?           @db.Text
+  extraCharges      Json?             // Store extra charges as JSON array
+  
+  // Relations
+  session           CustomerSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items             PaymentItem[]     // Snapshot of ordered items
+  
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  @@unique([userId, paymentNumber])
+}
+
+model PaymentItem {
+  id                String    @id @default(cuid())
+  paymentId         String
+  
+  // Menu item snapshot data (copied at payment time)
+  menuItemName      String
+  menuItemDescription String?
+  menuItemPrice     Decimal   @db.Decimal(10, 2)
+  categoryName      String
+  
+  // Order item data
+  quantity          Int
+  unitPrice         Decimal   @db.Decimal(10, 2) // Price per unit including selections
+  totalPrice        Decimal   @db.Decimal(10, 2) // quantity * unitPrice
+  notes             String?   @db.Text
+  selections        Json?     // Selected options as JSON
+  
+  // Relations
+  payment           Payment   @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+enum PaymentMethod {
+  CASH
+  QR
+  CREDIT_CARD
+  DEBIT_CARD
+}
+
+// Restaurant Settings Model (now User Settings)
+model RestaurantSettings {
+  id                    String     @id @default(cuid())
+  userId                String     @unique
+  allowOnlineOrdering   Boolean    @default(true)
+  acceptCashPayments    Boolean    @default(true)
+  acceptCardPayments    Boolean    @default(false)
+  deliveryEnabled       Boolean    @default(false)
+  pickupEnabled         Boolean    @default(true)
+  minimumOrderAmount    Decimal?   @db.Decimal(10, 2)
+  deliveryFee           Decimal?   @db.Decimal(10, 2)
+  estimatedPrepTime     Int        @default(30) // minutes
+  operatingHours        Json?      // Store as JSON for flexibility
+  user                  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+}

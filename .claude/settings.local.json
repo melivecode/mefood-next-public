@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx prisma migrate reset:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(npm run build:*)",
+      "Bash(rg:*)",
+      "Bash(npm run lint)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Allow: /auth/signin
+Allow: /auth/signup
+Allow: /menu/*
+
+# Disallow admin and private areas
+Disallow: /admin/
+Disallow: /restaurant-admin/
+Disallow: /api/
+Disallow: /restaurant/
+
+# Allow specific public endpoints
+Allow: /api/menu/*
+
+# Sitemap location
+Sitemap: https://mefood.app/sitemap.xml
+
+# Crawl-delay for bots (optional)
+Crawl-delay: 1

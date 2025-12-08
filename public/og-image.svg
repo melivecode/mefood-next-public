@@ -1,0 +1,40 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#A3DC9A"/>
+  
+  <!-- Background pattern -->
+  <rect width="1200" height="630" fill="url(#pattern)"/>
+  
+  <!-- Content container -->
+  <rect x="80" y="80" width="1040" height="470" rx="20" fill="#FAFBF9" fill-opacity="0.95"/>
+  
+  <!-- Logo -->
+  <image x="140" y="180" width="120" height="120" href="logo.png"/>
+  
+  <!-- Title -->
+  <text x="300" y="240" font-family="Sarabun, Arial, sans-serif" font-size="48" font-weight="bold" fill="#2E5E45">MeFood</text>
+  
+  <!-- Subtitle -->
+  <text x="300" y="290" font-family="Sarabun, Arial, sans-serif" font-size="32" fill="#2F2F2F">Restaurant Management System</text>
+  
+  <!-- Description -->
+  <text x="300" y="340" font-family="Sarabun, Arial, sans-serif" font-size="24" fill="#4F4F4F">Modern table management and ordering system</text>
+  <text x="300" y="380" font-family="Sarabun, Arial, sans-serif" font-size="24" fill="#4F4F4F">for small to medium restaurants</text>
+  
+  <!-- Features -->
+  <circle cx="320" cy="440" r="8" fill="#FFD55A"/>
+  <text x="340" y="448" font-family="Sarabun, Arial, sans-serif" font-size="20" fill="#2F2F2F">Table Management</text>
+  
+  <circle cx="520" cy="440" r="8" fill="#FFD55A"/>
+  <text x="540" y="448" font-family="Sarabun, Arial, sans-serif" font-size="20" fill="#2F2F2F">Order &amp; Payment</text>
+  
+  <circle cx="720" cy="440" r="8" fill="#FFD55A"/>
+  <text x="740" y="448" font-family="Sarabun, Arial, sans-serif" font-size="20" fill="#2F2F2F">Menu Management</text>
+  
+  <!-- Pattern definition -->
+  <defs>
+    <pattern id="pattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
+      <circle cx="50" cy="50" r="30" fill="#2E5E45" fill-opacity="0.05"/>
+    </pattern>
+  </defs>
+</svg>
