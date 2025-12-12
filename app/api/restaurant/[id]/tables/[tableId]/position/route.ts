@@ -19,12 +19,21 @@ export async function PUT(
 
     const { id: restaurantId, tableId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
 
-    // Verify table exists and belongs to the user
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Verify table exists and belongs to the restaurant
     const existingTable = await prisma.table.findFirst({
       where: {
         id: tableId,
-        userId: session.user.id
+        restaurantId: restaurantId
       }
     })
 
@@ -47,9 +56,9 @@ export async function PUT(
 
     // Update table position only (verify ownership)
     const table = await prisma.table.update({
-      where: { 
+      where: {
         id: tableId,
-        userId: session.user.id
+        restaurantId: restaurantId
       },
       data: {
         gridX: gridX,

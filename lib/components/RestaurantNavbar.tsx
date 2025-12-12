@@ -207,11 +207,11 @@ export function RestaurantNavbar({
                     fontWeight: 600
                   }}
                 >
-                  {!session.user?.image && (session.user?.ownerName ? session.user.ownerName.charAt(0).toUpperCase() : 'U')}
+                  {!session.user?.image && (session.user?.name ? session.user.name.charAt(0).toUpperCase() : 'U')}
                 </Avatar>
                 <Box>
                   <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {session.user?.ownerName || 'User'}
+                    {session.user?.name || 'User'}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {session.user?.restaurantName || 'Restaurant Owner'}
@@ -274,7 +274,7 @@ export function RestaurantNavbar({
                 </ListItem>
                 
                 <ListItem disablePadding>
-                  <ListItemButton onClick={() => handleMobileNavigation(`/menu/${session?.user?.id}`)}>
+                  <ListItemButton onClick={() => handleMobileNavigation(`/menu/${session?.user?.restaurantId}`)}>
                     <ListItemIcon>
                       <MenuBook />
                     </ListItemIcon>

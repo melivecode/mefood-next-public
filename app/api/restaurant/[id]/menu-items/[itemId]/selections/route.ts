@@ -17,14 +17,23 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _, itemId } = await params
+    const { id: restaurantId, itemId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
 
-    // Verify menu item exists and belongs to user
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Verify menu item exists and belongs to restaurant
     const menuItem = await prisma.menuItem.findFirst({
       where: {
         id: itemId,
-        userId: session.user.id
+        restaurantId: restaurantId
       }
     })
 
@@ -68,14 +77,23 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _, itemId } = await params
+    const { id: restaurantId, itemId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
 
-    // Verify menu item exists and belongs to user
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Verify menu item exists and belongs to restaurant
     const menuItem = await prisma.menuItem.findFirst({
       where: {
         id: itemId,
-        userId: session.user.id
+        restaurantId: restaurantId
       }
     })
 
@@ -95,7 +113,7 @@ export async function POST(
       where: { menuItemId: itemId },
       orderBy: { sortOrder: 'desc' }
     })
-    
+
     const sortOrder = (lastSelection?.sortOrder || 0) + 1
 
     // Create selection with options

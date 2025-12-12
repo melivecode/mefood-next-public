@@ -714,7 +714,7 @@ export default function TableOrderingPage(props: { params: Promise<{ tableId: st
                                   fontSize: { xs: '1rem', md: '1.1rem' }
                                 }}
                               >
-                                B {parseFloat(item.price).toFixed(2)}
+                                ฿{parseFloat(item.price).toFixed(2)}
                               </Typography>
                             </CardContent>
                             <CardActions>
@@ -1045,7 +1045,7 @@ export default function TableOrderingPage(props: { params: Promise<{ tableId: st
                           {t('tableOrder.subtotal')}
                         </Typography>
                         <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.dark' }}>
-                          B {parseFloat(order.totalAmount).toFixed(2)}
+                          ฿{parseFloat(order.totalAmount).toFixed(2)}
                         </Typography>
                       </Box>
                     </Paper>
@@ -1193,7 +1193,7 @@ export default function TableOrderingPage(props: { params: Promise<{ tableId: st
                         {t('tableOrder.totalPaid')}
                       </Typography>
                       <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.dark' }}>
-                        B {parseFloat(payment.finalAmount).toFixed(2)}
+                        ฿{parseFloat(payment.finalAmount).toFixed(2)}
                       </Typography>
                     </Box>
                     
@@ -1247,7 +1247,7 @@ export default function TableOrderingPage(props: { params: Promise<{ tableId: st
                 )}
                 
                 <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.dark', mb: 2 }}>
-                  B {parseFloat(selectedItem.price).toFixed(2)}
+                  ฿{parseFloat(selectedItem.price).toFixed(2)}
                 </Typography>
 
                 {selectedItem.selections && selectedItem.selections.map(selection => (
@@ -1290,7 +1290,7 @@ export default function TableOrderingPage(props: { params: Promise<{ tableId: st
                         >
                           <span>{option.name}</span>
                           {parseFloat(option.priceAdd) > 0 && (
-                            <span>+B {parseFloat(option.priceAdd).toFixed(2)}</span>
+                            <span>+฿{parseFloat(option.priceAdd).toFixed(2)}</span>
                           )}
                         </Button>
                       ))}

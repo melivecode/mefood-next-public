@@ -12,7 +12,7 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id) {
+    if (!session?.user?.restaurantId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -20,9 +20,9 @@ export async function GET(
 
     // Get session with all orders and their items for checkout calculation
     const customerSession = await prisma.customerSession.findFirst({
-      where: { 
+      where: {
         id: sessionId,
-        userId: session.user.id 
+        restaurantId: session.user.restaurantId
       },
       include: {
         table: true,
@@ -127,17 +127,17 @@ export async function PUT(
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id) {
+    if (!session?.user?.restaurantId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { sessionId } = await params
 
-    // Verify customer session exists and belongs to user
+    // Verify customer session exists and belongs to restaurant
     const customerSession = await prisma.customerSession.findFirst({
-      where: { 
+      where: {
         id: sessionId,
-        userId: session.user.id 
+        restaurantId: session.user.restaurantId
       }
     })
 

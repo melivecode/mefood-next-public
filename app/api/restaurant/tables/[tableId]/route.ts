@@ -16,12 +16,22 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const { tableId } = await params
 
     const table = await prisma.table.findFirst({
-      where: { 
+      where: {
         id: tableId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       },
       include: {
         sessions: {
@@ -70,15 +80,25 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const { tableId } = await params
     const body = await request.json()
     const { number, name, capacity, isActive, sortOrder, gridX, gridY, gridWidth, gridHeight } = body
 
-    // Verify table exists and belongs to user
+    // Verify table exists and belongs to user's restaurant
     const existingTable = await prisma.table.findFirst({
-      where: { 
+      where: {
         id: tableId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       }
     })
 
@@ -98,7 +118,7 @@ export async function PUT(
     if (number.trim() !== existingTable.number) {
       const duplicateTable = await prisma.table.findFirst({
         where: {
-          userId: session.user.id,
+          restaurantId: user.restaurantId,
           number: number.trim(),
           id: { not: tableId }
         }
@@ -159,19 +179,29 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const { tableId } = await params
 
-    // Verify table exists and belongs to user
+    // Verify table exists and belongs to user's restaurant
     const existingTable = await prisma.table.findFirst({
-      where: { 
+      where: {
         id: tableId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       },
       include: {
         _count: {
-          select: { 
+          select: {
             orders: true,
-            sessions: true 
+            sessions: true
           }
         }
       }

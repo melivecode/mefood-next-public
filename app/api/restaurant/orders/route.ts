@@ -13,6 +13,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     // Get query parameters for filtering
     const { searchParams } = new URL(request.url)
     const sessionId = searchParams.get('sessionId')
@@ -21,14 +31,14 @@ export async function GET(request: NextRequest) {
 
     // Build where clause
     const where: any = {
-      userId: session.user.id
+      restaurantId: user.restaurantId
     }
 
     if (sessionId) where.sessionId = sessionId
     if (tableId) where.tableId = tableId
     if (status) where.status = status
 
-    // Get all orders for the user with optional filters
+    // Get all orders for the user's restaurant with optional filters
     const orders = await prisma.order.findMany({
       where,
       include: {
@@ -64,16 +74,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const body = await request.json()
-    const { 
-      sessionId, 
-      tableId, 
-      customerName, 
-      customerPhone, 
-      customerEmail, 
-      notes, 
+    const {
+      sessionId,
+      tableId,
+      customerName,
+      customerPhone,
+      customerEmail,
+      notes,
       items,
-      totalAmount 
+      totalAmount
     } = body
 
     // Validate required fields
@@ -84,12 +104,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify session exists and belongs to user if provided
+    // Verify session exists and belongs to user's restaurant if provided
     if (sessionId) {
       const customerSession = await prisma.customerSession.findFirst({
-        where: { 
+        where: {
           id: sessionId,
-          userId: session.user.id 
+          restaurantId: user.restaurantId
         }
       })
 
@@ -98,12 +118,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Verify table exists and belongs to user if provided
+    // Verify table exists and belongs to user's restaurant if provided
     if (tableId) {
       const table = await prisma.table.findFirst({
-        where: { 
+        where: {
           id: tableId,
-          userId: session.user.id 
+          restaurantId: user.restaurantId
         }
       })
 
@@ -117,20 +137,20 @@ export async function POST(request: NextRequest) {
     if (!totalAmount) {
       for (const item of items) {
         const menuItem = await prisma.menuItem.findFirst({
-          where: { 
+          where: {
             id: item.menuItemId,
-            userId: session.user.id 
+            restaurantId: user.restaurantId
           }
         })
         if (menuItem) {
           const itemPrice = Number(menuItem.price) * item.quantity
-          
+
           // Add selection prices if any
           if (item.selections) {
             const _ = JSON.parse(item.selections)
             // Add logic to calculate selection prices if needed
           }
-          
+
           calculatedTotal += itemPrice
         }
       }
@@ -138,7 +158,7 @@ export async function POST(request: NextRequest) {
 
     // Generate order number
     const orderCount = await prisma.order.count({
-      where: { userId: session.user.id }
+      where: { restaurantId: user.restaurantId }
     })
     const orderNumber = `ORD${String(orderCount + 1).padStart(6, '0')}`
 
@@ -154,7 +174,7 @@ export async function POST(request: NextRequest) {
         notes: notes?.trim() || null,
         sessionId: sessionId || null,
         tableId: tableId || null,
-        userId: session.user.id,
+        restaurantId: user.restaurantId,
         items: {
           create: items.map((item: any) => ({
             quantity: Number(item.quantity) || 1,

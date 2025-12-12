@@ -90,7 +90,7 @@ export default function RestaurantMenuPage() {
   }
 
   // Check if user has restaurant setup completed
-  const hasRestaurantId = !!(session?.user?.id && session?.user?.restaurantName)
+  const hasRestaurantId = !!(session?.user?.restaurantId)
   
   // Check if menu item should be disabled
   const isMenuItemDisabled = (index: number, item: any) => {
@@ -128,6 +128,9 @@ export default function RestaurantMenuPage() {
   // Determine priority based on restaurant setup
   const needsSetup = !hasRestaurantId || !hasRestaurantDetails || !hasMenu || !hasTables
 
+  // Check if user is admin (only admins can see Restaurant Admin)
+  const isAdmin = session?.user?.role === 'ADMIN'
+
   const allMenuItems = [
     {
       title: t('restaurant.tableManagement'),
@@ -143,7 +146,7 @@ export default function RestaurantMenuPage() {
       description: t('restaurant.menuDesc'),
       icon: <MenuBook sx={{ fontSize: 40 }} />,
       color: 'primary',
-      path: `/menu/${session?.user?.id}`,
+      path: `/menu/${session?.user?.restaurantId}`,
       features: [],
       priority: hasRestaurantId ? 2 : 5
     },
@@ -165,7 +168,8 @@ export default function RestaurantMenuPage() {
       features: [],
       priority: hasRestaurantId ? 4 : 4
     },
-    {
+    // Only show Restaurant Admin for admin users
+    ...(isAdmin ? [{
       title: t('restaurant.restaurantAdmin'),
       description: t('restaurant.restaurantAdminDesc'),
       icon: <AdminPanelSettings sx={{ fontSize: 40 }} />,
@@ -173,7 +177,7 @@ export default function RestaurantMenuPage() {
       path: '/restaurant-admin',
       features: [],
       priority: hasRestaurantId ? 5 : 1
-    }
+    }] : [])
   ]
 
   // Sort menu items by priority

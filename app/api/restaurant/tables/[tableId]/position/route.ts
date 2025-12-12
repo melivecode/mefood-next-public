@@ -12,7 +12,7 @@ export async function PUT(
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id) {
+    if (!session?.user?.restaurantId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -20,11 +20,11 @@ export async function PUT(
     const body = await request.json()
     const { gridX, gridY, gridWidth, gridHeight } = body
 
-    // Verify table exists and belongs to user
+    // Verify table exists and belongs to restaurant
     const existingTable = await prisma.table.findFirst({
-      where: { 
+      where: {
         id: tableId,
-        userId: session.user.id 
+        restaurantId: session.user.restaurantId
       }
     })
 

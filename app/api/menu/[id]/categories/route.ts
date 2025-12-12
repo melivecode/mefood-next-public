@@ -10,24 +10,24 @@ export async function GET(
   try {
     const { id: restaurantId } = await params
 
-    // Verify user restaurant exists and is active
-    const user = await prisma.user.findUnique({
+    // Verify restaurant exists and is active
+    const restaurant = await prisma.restaurant.findUnique({
       where: { id: restaurantId },
-      select: { id: true, isRestaurantActive: true, restaurantName: true }
+      select: { id: true, isActive: true, name: true }
     })
 
-    if (!user || !user.restaurantName) {
+    if (!restaurant) {
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
     }
 
-    if (!user.isRestaurantActive) {
+    if (!restaurant.isActive) {
       return NextResponse.json({ error: 'Restaurant is not active' }, { status: 403 })
     }
 
     // Fetch categories that have active menu items
     const categories = await prisma.category.findMany({
-      where: { 
-        userId: restaurantId,
+      where: {
+        restaurantId,
         isActive: true,
         menuItems: {
           some: {

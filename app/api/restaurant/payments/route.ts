@@ -13,8 +13,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const { searchParams } = new URL(request.url)
-    
+
     // Parse query parameters
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
@@ -23,12 +33,12 @@ export async function GET(request: NextRequest) {
     const paymentMethod = searchParams.get('paymentMethod')
     const searchTerm = searchParams.get('search')
     const sessionId = searchParams.get('sessionId')
-    
+
     const skip = (page - 1) * limit
 
     // Build where clause
     const where: any = {
-      userId: session.user.id
+      restaurantId: user.restaurantId
     }
 
     if (startDate && endDate) {

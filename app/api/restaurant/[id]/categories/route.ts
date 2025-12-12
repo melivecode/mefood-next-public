@@ -16,11 +16,21 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _ } = await params
+    const { id: restaurantId } = await params
+
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Fetch categories
     const categories = await prisma.category.findMany({
-      where: { userId: session.user.id },
+      where: { restaurantId: restaurantId },
       include: {
         _count: {
           select: { menuItems: true }
@@ -53,10 +63,19 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _ } = await params
+    const { id: restaurantId } = await params
     const body = await request.json()
     const { name, description, isActive } = body
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Validate required fields
     if (!name || name.trim().length === 0) {
@@ -69,7 +88,7 @@ export async function POST(
     // Check if category name already exists
     const existingCategory = await prisma.category.findFirst({
       where: {
-        userId: session.user.id,
+        restaurantId: restaurantId,
         name: name.trim()
       }
     })
@@ -83,7 +102,7 @@ export async function POST(
 
     // Get the next sort order
     const lastCategory = await prisma.category.findFirst({
-      where: { userId: session.user.id },
+      where: { restaurantId: restaurantId },
       orderBy: { sortOrder: 'desc' }
     })
 
@@ -96,7 +115,7 @@ export async function POST(
         description: description?.trim() || null,
         isActive: Boolean(isActive),
         sortOrder,
-        userId: session.user.id
+        restaurantId: restaurantId
       },
       include: {
         _count: {

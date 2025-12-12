@@ -13,8 +13,18 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json([])
+    }
+
     const categories = await prisma.category.findMany({
-      where: { userId: session.user.id },
+      where: { restaurantId: user.restaurantId },
       include: {
         _count: {
           select: { menuItems: true }
@@ -44,6 +54,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Only admins can create categories
+    if (session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Please create your restaurant first' }, { status: 400 })
+    }
+
     const body = await request.json()
     const { name, description, isActive, sortOrder } = body
 
@@ -62,14 +87,14 @@ export async function POST(request: NextRequest) {
         description: description?.trim() || null,
         isActive: Boolean(isActive ?? true),
         sortOrder: Number(sortOrder) || 0,
-        userId: session.user.id
+        restaurantId: user.restaurantId
       }
     })
 
     return NextResponse.json(category, { status: 201 })
   } catch (error) {
     console.error('Error creating category:', error)
-    
+
     if (error instanceof Error) {
       if (error.message.includes('Unique constraint')) {
         return NextResponse.json(

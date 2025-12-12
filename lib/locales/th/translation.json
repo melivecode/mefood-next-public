@@ -303,6 +303,20 @@
     "orderStatus": "สถานะออเดอร์",
     "close": "ปิด"
   },
+  "setup": {
+    "welcome": "ยินดีต้อนรับสู่ MeFood",
+    "subtitle": "มาตั้งค่าระบบจัดการร้านอาหารของคุณกัน",
+    "step1": "สร้างบัญชีผู้ดูแล",
+    "step2": "รายละเอียดร้านอาหาร",
+    "step3": "พร้อมใช้งาน",
+    "createAdmin": "สร้างบัญชีผู้ดูแล",
+    "adminDescription": "นี่จะเป็นบัญชีผู้ดูแลระบบสำหรับร้านอาหารของคุณ",
+    "restaurantName": "ชื่อร้านอาหาร",
+    "restaurantNameHelper": "คุณสามารถเปลี่ยนได้ภายหลังในการตั้งค่า",
+    "passwordHelper": "อย่างน้อย 6 ตัวอักษร",
+    "creating": "กำลังสร้างบัญชี...",
+    "createButton": "สร้างบัญชีและดำเนินการต่อ"
+  },
   "common": {
     "loading": "กำลังโหลด...",
     "save": "บันทึก",
@@ -373,6 +387,9 @@
     "order": "สั่งอาหาร",
     "bill": "บิล",
     "checkOut": "เช็คเอาต์",
+    "checkout": "ชำระเงิน",
+    "seat": "จัดที่นั่ง",
+    "ordersLabel": "ออเดอร์",
     "clickToSeatExceeds": "คลิกเพื่อจัดที่นั่ง (เกินความจุ)",
     "clickToSeatCustomer": "คลิกเพื่อจัดที่นั่งลูกค้า",
     "readyForCustomers": "พร้อมสำหรับลูกค้า",
@@ -422,6 +439,11 @@
       "customerCheckedOut": "{{customerName}} เช็คเอาต์เรียบร้อยแล้ว",
       "customerRemoved": "{{customerName}} ถูกลบจากรายการรอแล้ว"
     }
+  },
+  "session": {
+    "takeaway": "สั่งกลับบ้าน / Walk-in",
+    "notFound": "ไม่พบรายการลูกค้า",
+    "orderForSession": "สั่งอาหารสำหรับลูกค้า"
   },
   "tableOrder": {
     "tableNumber": "โต๊ะ {{number}} - เมนูสั่งอาหาร",
@@ -518,6 +540,7 @@
     "backToTable": "กลับสู่โต๊ะ",
     "backToTableNumber": "กลับสู่โต๊ะ {{number}}{{name}}",
     "backToAllTables": "กลับสู่โต๊ะทั้งหมด",
+    "backToSession": "กลับสู่หน้าสั่งอาหาร",
     "billSummary": "สรุปบิล",
     "table": "โต๊ะ {{number}}",
     "walkIn": "เดินเข้า",
@@ -659,6 +682,37 @@
     "failedToLoadHistory": "โหลดประวัติการชำระเงินไม่สำเร็จ",
     "failedToLoadDetails": "โหลดรายละเอียดการชำระเงินไม่สำเร็จ",
     "loading": "กำลังโหลด..."
+  },
+  "staff": {
+    "staffManagement": "จัดการเจ้าหน้าที่",
+    "staffManagementDesc": "จัดการบัญชีเจ้าหน้าที่สำหรับร้านอาหารของคุณ",
+    "backToRestaurantAdmin": "กลับสู่ Restaurant Admin",
+    "addStaff": "เพิ่มเจ้าหน้าที่",
+    "noStaffYet": "ยังไม่มีเจ้าหน้าที่",
+    "noStaffDesc": "เพิ่มเจ้าหน้าที่เพื่อช่วยจัดการร้านอาหารของคุณ",
+    "addFirstStaff": "เพิ่มเจ้าหน้าที่คนแรก",
+    "name": "ชื่อ",
+    "email": "อีเมล",
+    "role": "บทบาท",
+    "createdAt": "สร้างเมื่อ",
+    "actions": "การดำเนินการ",
+    "noName": "ไม่มีชื่อ",
+    "staffRole": "เจ้าหน้าที่",
+    "editStaff": "แก้ไขเจ้าหน้าที่",
+    "createStaff": "สร้างเจ้าหน้าที่ใหม่",
+    "deleteStaff": "ลบเจ้าหน้าที่",
+    "staffName": "ชื่อเจ้าหน้าที่",
+    "staffNamePlaceholder": "กรอกชื่อเจ้าหน้าที่",
+    "emailPlaceholder": "staff@example.com",
+    "password": "รหัสผ่าน",
+    "passwordOptional": "รหัสผ่าน (เว้นว่างไว้เพื่อคงรหัสผ่านเดิม)",
+    "passwordPlaceholder": "อย่างน้อย 6 ตัวอักษร",
+    "deleteConfirm": "คุณแน่ใจหรือไม่ว่าต้องการลบเจ้าหน้าที่นี้?",
+    "deleteWarning": "การดำเนินการนี้ไม่สามารถยกเลิกได้",
+    "failedToLoadStaff": "ไม่สามารถโหลดข้อมูลเจ้าหน้าที่ได้",
+    "staffCreatedSuccess": "สร้างเจ้าหน้าที่สำเร็จแล้ว",
+    "staffUpdatedSuccess": "อัปเดตเจ้าหน้าที่สำเร็จแล้ว",
+    "staffDeletedSuccess": "ลบเจ้าหน้าที่สำเร็จแล้ว"
   },
   "admin": {
     "title": "การบริหารระบบ",

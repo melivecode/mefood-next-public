@@ -602,7 +602,7 @@ export default function MenuManagementPage() {
               color="primary"
               size="small"
               startIcon={<Visibility />}
-              onClick={() => window.open(`/menu/${session?.user?.id}`, '_blank')}
+              onClick={() => window.open(`/menu/${session?.user?.restaurantId}`, '_blank')}
               fullWidth
               sx={{
                 textTransform: 'none',
@@ -637,7 +637,7 @@ export default function MenuManagementPage() {
                 color="primary"
                 size="small"
                 startIcon={<Visibility />}
-                onClick={() => window.open(`/menu/${session?.user?.id}`, '_blank')}
+                onClick={() => window.open(`/menu/${session?.user?.restaurantId}`, '_blank')}
                 sx={{
                   textTransform: 'none',
                   fontWeight: 500,
@@ -1663,7 +1663,7 @@ export default function MenuManagementPage() {
                       <ImageUpload
                         key={editingItem?.id || 'new'}
                         ref={imageUploadRef}
-                        restaurantId={session?.user?.id || ''}
+                        restaurantId={session?.user?.restaurantId || ''}
                         menuItemId={editingItem?.id}
                         currentImage={editingItem?.image}
                         onImageUploaded={(imagePath) => {
@@ -1706,7 +1706,7 @@ export default function MenuManagementPage() {
               <Grid size={{ xs: 12 }}>
                 <SelectionsManager
                   menuItemId={editingItem?.id}
-                  restaurantId={session?.user?.id || ''}
+                  restaurantId={session?.user?.restaurantId || ''}
                   selections={itemSelections}
                   onSelectionsChange={setItemSelections}
                   disabled={saving}

@@ -28,25 +28,37 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    const user = await prisma.user.create({
-      data: {
-        ownerName,
-        email,
-        password: hashedPassword,
-        restaurantName,
-        restaurantDescription: null,
-        restaurantAddress: null,
-        restaurantPhone: null,
-        restaurantEmail: email, // Use user email as default restaurant email
-        isRestaurantActive: true
-      }
+    // Create restaurant and user together using a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the restaurant first
+      const restaurant = await tx.restaurant.create({
+        data: {
+          name: restaurantName,
+          email: email, // Use user email as default restaurant email
+          isActive: true
+        }
+      })
+
+      // Create the admin user linked to the restaurant
+      const user = await tx.user.create({
+        data: {
+          name: ownerName,
+          email,
+          password: hashedPassword,
+          role: 'ADMIN',
+          restaurantId: restaurant.id
+        }
+      })
+
+      return { user, restaurant }
     })
 
     return NextResponse.json(
-      { message: "User and restaurant created successfully", userId: user.id },
+      { message: "User and restaurant created successfully", userId: result.user.id },
       { status: 201 }
     )
   } catch (error) {
+    console.error('Signup error:', error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

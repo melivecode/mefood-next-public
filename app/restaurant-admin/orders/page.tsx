@@ -423,7 +423,7 @@ export default function OrdersPage() {
                 <Grid size={{ xs: 6, sm: 3 }}>
                   <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'success.50' }}>
                     <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                      ${summaryData.totalAmount.toFixed(2)}
+                      ฿{summaryData.totalAmount.toFixed(2)}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Total Amount
@@ -513,7 +513,7 @@ export default function OrdersPage() {
                         </TableCell>
                         <TableCell align="right">
                           <Typography variant="body1" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                            ${orderGroup.totalAmount.toFixed(2)}
+                            ฿{orderGroup.totalAmount.toFixed(2)}
                           </Typography>
                         </TableCell>
                         <TableCell align="center">
@@ -564,7 +564,7 @@ export default function OrdersPage() {
                       {status.label}
                     </Typography>
                     <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                      ${status.amount.toFixed(2)}
+                      ฿{status.amount.toFixed(2)}
                     </Typography>
                   </Paper>
                 </Grid>
@@ -658,7 +658,7 @@ export default function OrdersPage() {
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', pt: 1, borderTop: 1, borderColor: 'divider' }}>
                           <Typography variant="h6" sx={{ fontWeight: 700 }}>Total Amount:</Typography>
                           <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                            ${selectedOrderGroup.totalAmount.toFixed(2)}
+                            ฿{selectedOrderGroup.totalAmount.toFixed(2)}
                           </Typography>
                         </Box>
                       </Box>
@@ -702,16 +702,16 @@ export default function OrdersPage() {
                                 <TableRow key={item.id}>
                                   <TableCell>{item.menuItem.name}</TableCell>
                                   <TableCell align="center">{item.quantity}</TableCell>
-                                  <TableCell align="right" sx={{ color: 'text.primary' }}>${Number(item.price).toFixed(2)}</TableCell>
+                                  <TableCell align="right" sx={{ color: 'text.primary' }}>฿{Number(item.price).toFixed(2)}</TableCell>
                                   <TableCell align="right" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                                    ${(item.quantity * Number(item.price)).toFixed(2)}
+                                    ฿{(item.quantity * Number(item.price)).toFixed(2)}
                                   </TableCell>
                                 </TableRow>
                               ))}
                               <TableRow>
                                 <TableCell colSpan={3} sx={{ fontWeight: 700, borderTop: 2, borderColor: 'divider' }}>Order Subtotal:</TableCell>
                                 <TableCell align="right" sx={{ fontWeight: 700, borderTop: 2, borderColor: 'divider', color: 'text.primary' }}>
-                                  ${Number(order.totalAmount).toFixed(2)}
+                                  ฿{Number(order.totalAmount).toFixed(2)}
                                 </TableCell>
                               </TableRow>
                             </TableBody>

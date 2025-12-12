@@ -43,16 +43,19 @@ export default function SignUp() {
       try {
         const response = await fetch('/api/check-user-exists');
         const data = await response.json();
-        
+
         if (data.userExists) {
           // If a user already exists, redirect to signin
           router.push('/auth/signin');
           return;
+        } else {
+          // If no users exist, redirect to setup page for first-time setup
+          router.push('/setup');
+          return;
         }
       } catch (error) {
-        // Error checking user existence
-      } finally {
-        setCheckingUser(false);
+        // Error checking user existence - redirect to setup as fallback
+        router.push('/setup');
       }
     };
 

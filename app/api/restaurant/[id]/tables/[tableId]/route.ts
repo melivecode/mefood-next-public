@@ -19,20 +19,29 @@ export async function GET(
 
     const { id: restaurantId, tableId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
 
-    // Get table with session information and user details
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Get table with session information and restaurant details
     const table = await prisma.table.findFirst({
       where: {
         id: tableId,
-        userId: session.user.id
+        restaurantId: restaurantId
       },
       include: {
-        user: {
+        restaurant: {
           select: {
             id: true,
-            restaurantName: true,
-            restaurantAddress: true,
-            restaurantPhone: true
+            name: true,
+            address: true,
+            phone: true
           }
         },
         sessions: {
@@ -49,7 +58,7 @@ export async function GET(
             waiter: {
               select: {
                 id: true,
-                ownerName: true,
+                name: true,
                 email: true
               }
             }
@@ -94,12 +103,21 @@ export async function PUT(
 
     const { id: restaurantId, tableId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
 
-    // Verify table exists and belongs to the user
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Verify table exists and belongs to the restaurant
     const existingTable = await prisma.table.findFirst({
       where: {
         id: tableId,
-        userId: session.user.id
+        restaurantId: restaurantId
       }
     })
 
@@ -118,12 +136,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Valid capacity is required' }, { status: 400 })
     }
 
-    // Check if table number already exists for another table for this user
+    // Check if table number already exists for another table for this restaurant
     if (number.trim() !== existingTable.number) {
       const conflictingTable = await prisma.table.findUnique({
         where: {
-          userId_number: {
-            userId: session.user.id,
+          restaurantId_number: {
+            restaurantId: restaurantId,
             number: number.trim()
           }
         }
@@ -136,9 +154,9 @@ export async function PUT(
 
     // Update table (verify ownership)
     const table = await prisma.table.update({
-      where: { 
+      where: {
         id: tableId,
-        userId: session.user.id
+        restaurantId: restaurantId
       },
       data: {
         number: number.trim(),
@@ -173,12 +191,21 @@ export async function DELETE(
 
     const { id: restaurantId, tableId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
 
-    // Verify table exists and belongs to the user
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Verify table exists and belongs to the restaurant
     const existingTable = await prisma.table.findFirst({
       where: {
         id: tableId,
-        userId: session.user.id
+        restaurantId: restaurantId
       }
     })
 
@@ -202,9 +229,9 @@ export async function DELETE(
 
     // Delete table (verify ownership)
     await prisma.table.delete({
-      where: { 
+      where: {
         id: tableId,
-        userId: session.user.id
+        restaurantId: restaurantId
       }
     })
 

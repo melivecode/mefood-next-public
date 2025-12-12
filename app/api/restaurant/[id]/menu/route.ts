@@ -16,13 +16,22 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _ } = await params
+    const { id: restaurantId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Fetch menu items with category information for menu display
     const menuItems = await prisma.menuItem.findMany({
-      where: { 
-        userId: session.user.id,
+      where: {
+        restaurantId: restaurantId,
         isActive: true // Only return active items for menu display
       },
       select: {

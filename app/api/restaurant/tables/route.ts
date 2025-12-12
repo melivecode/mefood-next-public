@@ -13,10 +13,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get all tables for the current user
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
+    // Get all tables for the current user's restaurant
     const tables = await prisma.table.findMany({
-      where: { 
-        userId: session.user.id,
+      where: {
+        restaurantId: user.restaurantId,
         isActive: true
       },
       orderBy: {
@@ -43,6 +53,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const body = await request.json()
     const { number, name, capacity, isActive, sortOrder, gridX, gridY, gridWidth, gridHeight } = body
 
@@ -54,10 +74,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if table number already exists for this user
+    // Check if table number already exists for this restaurant
     const existingTable = await prisma.table.findFirst({
       where: {
-        userId: session.user.id,
+        restaurantId: user.restaurantId,
         number: number.trim()
       }
     })
@@ -81,7 +101,7 @@ export async function POST(request: NextRequest) {
         gridY: Number(gridY) || 0,
         gridWidth: Number(gridWidth) || 2,
         gridHeight: Number(gridHeight) || 2,
-        userId: session.user.id
+        restaurantId: user.restaurantId
       }
     })
 

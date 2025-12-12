@@ -598,7 +598,7 @@ function BillingHistoryContent() {
               startIcon={<OpenInNew />}
               onClick={() => {
                 if (selectedPayment) {
-                  router.push(`/restaurant/receipt?paymentId=${selectedPayment.id}&restaurantId=${session?.user?.id}&from=billing`)
+                  router.push(`/restaurant/receipt?paymentId=${selectedPayment.id}&restaurantId=${session?.user?.restaurantId}&from=billing`)
                 }
               }}
             >

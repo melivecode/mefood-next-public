@@ -17,13 +17,22 @@ export async function GET(
     }
 
     const { id: restaurantId, paymentId } = await params
-    
+
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Get payment details
     const payment = await prisma.payment.findFirst({
       where: {
         id: paymentId,
-        userId: session.user.id // Ensure payment belongs to the user
+        restaurantId: restaurantId // Ensure payment belongs to the restaurant
       },
       include: {
         items: {
@@ -39,7 +48,7 @@ export async function GET(
             waiter: {
               select: {
                 id: true,
-                ownerName: true,
+                name: true,
                 email: true
               }
             }
@@ -68,12 +77,12 @@ export async function GET(
 
         // Resolve option IDs to readable text
         const resolvedSelections: { [key: string]: string[] } = {}
-        
+
         for (const [selectionId, optionIds] of Object.entries(parsedSelections)) {
           if (!optionIds || (Array.isArray(optionIds) && optionIds.length === 0)) continue
 
           const ids = Array.isArray(optionIds) ? optionIds : [optionIds]
-          
+
           // Fetch option details with selection name
           const options = await prisma.selectionOption.findMany({
             where: {
@@ -93,7 +102,7 @@ export async function GET(
           if (options.length > 0) {
             // Use the selection name from the first option (they all belong to the same selection)
             const selectionName = options[0].selection.name
-            
+
             resolvedSelections[selectionName] = options.map(opt => {
               const priceAdd = Number(opt.priceAdd)
               return priceAdd > 0 ? `${opt.name} (+B${priceAdd.toFixed(2)})` : opt.name

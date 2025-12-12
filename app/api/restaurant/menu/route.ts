@@ -13,10 +13,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // All operations are automatically scoped to the authenticated user
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
+    // All operations are automatically scoped to the authenticated user's restaurant
     const menuItems = await prisma.menuItem.findMany({
-      where: { 
-        userId: session.user.id,
+      where: {
+        restaurantId: user.restaurantId,
         isActive: true
       },
       select: {

@@ -1,21 +1,23 @@
 'use client';
 
-import { 
-  Box, 
-  Container, 
-  Typography, 
-  Button, 
-  Stack, 
-  Card, 
+import {
+  Box,
+  Container,
+  Typography,
+  Button,
+  Stack,
+  Card,
   CardContent,
   Grid,
   Fab,
-  Paper
+  Paper,
+  CircularProgress
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import NavigationIcon from '@mui/icons-material/Navigation';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
@@ -27,6 +29,7 @@ import { PageTitle } from '@/lib/components/PageTitle';
 
 export default function Home() {
   const { data: session } = useSession();
+  const router = useRouter();
   const theme = useTheme();
   const { t } = useTranslation();
   const [userExists, setUserExists] = useState<boolean>(false);
@@ -38,21 +41,46 @@ export default function Home() {
       try {
         const response = await fetch('/api/check-user-exists');
         const data = await response.json();
+
+        // If no users exist, redirect to setup page
+        if (!data.userExists) {
+          router.push('/setup');
+          // Don't set loading to false - keep showing loading screen during redirect
+          return;
+        }
+
         setUserExists(data.userExists);
         setRestaurantName(data.restaurantName);
+        setLoading(false);
       } catch (error) {
         setUserExists(false);
-      } finally {
         setLoading(false);
       }
     };
 
     checkUserExists();
-  }, []);
+  }, [router]);
+
+  // Show loading screen while checking if account exists
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'background.default'
+        }}
+      >
+        <CircularProgress color="primary" />
+      </Box>
+    );
+  }
 
   return (
     <>
-      <Navbar 
+      <Navbar
         rightAction={<LanguageSwitcher />}
       />
 

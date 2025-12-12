@@ -17,19 +17,28 @@ export async function DELETE(
     }
 
     const { id: restaurantId, sessionId } = await params
-    
 
-    // Check if session exists and belongs to this user
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Check if session exists and belongs to this restaurant
     const customerSession = await prisma.customerSession.findUnique({
       where: { id: sessionId },
-      select: { id: true, userId: true, status: true }
+      select: { id: true, restaurantId: true, status: true }
     })
 
     if (!customerSession) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
-    if (customerSession.userId !== session.user.id) {
+    if (customerSession.restaurantId !== restaurantId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -40,9 +49,9 @@ export async function DELETE(
 
     // Delete the session (verify ownership)
     await prisma.customerSession.delete({
-      where: { 
+      where: {
         id: sessionId,
-        userId: session.user.id
+        restaurantId: restaurantId
       }
     })
 

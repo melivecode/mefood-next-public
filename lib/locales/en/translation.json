@@ -332,6 +332,20 @@
     "orderStatus": "Order Status",
     "close": "Close"
   },
+  "setup": {
+    "welcome": "Welcome to MeFood",
+    "subtitle": "Let's set up your restaurant management system",
+    "step1": "Create Admin Account",
+    "step2": "Restaurant Details",
+    "step3": "Ready to Go",
+    "createAdmin": "Create Admin Account",
+    "adminDescription": "This will be the administrator account for your restaurant",
+    "restaurantName": "Restaurant Name",
+    "restaurantNameHelper": "You can change this later in settings",
+    "passwordHelper": "Minimum 6 characters",
+    "creating": "Creating Account...",
+    "createButton": "Create Account & Continue"
+  },
   "common": {
     "loading": "Loading...",
     "save": "Save",
@@ -402,6 +416,9 @@
     "order": "Order",
     "bill": "Bill",
     "checkOut": "Check Out",
+    "checkout": "Checkout",
+    "seat": "Seat",
+    "ordersLabel": "orders",
     "clickToSeatExceeds": "Click to seat (exceeds capacity)",
     "clickToSeatCustomer": "Click to seat customer",
     "readyForCustomers": "Ready for customers",
@@ -451,6 +468,11 @@
       "customerCheckedOut": "{{customerName}} checked out successfully",
       "customerRemoved": "{{customerName}} removed from waiting list"
     }
+  },
+  "session": {
+    "takeaway": "Takeaway / Walk-in Order",
+    "notFound": "Session not found",
+    "orderForSession": "Order for Session"
   },
   "tableOrder": {
     "tableNumber": "Table {{number}} - Order Menu",
@@ -547,6 +569,7 @@
     "backToTable": "Back to Table",
     "backToTableNumber": "Back to Table {{number}}{{name}}",
     "backToAllTables": "Back to All Tables",
+    "backToSession": "Back to Order",
     "billSummary": "Bill Summary",
     "table": "Table {{number}}",
     "walkIn": "Walk-in",
@@ -688,6 +711,37 @@
     "failedToLoadHistory": "Failed to load payment history",
     "failedToLoadDetails": "Failed to load payment details",
     "loading": "Loading..."
+  },
+  "staff": {
+    "staffManagement": "Staff Management",
+    "staffManagementDesc": "Manage staff accounts for your restaurant",
+    "backToRestaurantAdmin": "Back to Restaurant Admin",
+    "addStaff": "Add Staff",
+    "noStaffYet": "No Staff Members Yet",
+    "noStaffDesc": "Add staff members to help manage your restaurant",
+    "addFirstStaff": "Add First Staff Member",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "createdAt": "Created",
+    "actions": "Actions",
+    "noName": "No name",
+    "staffRole": "Staff",
+    "editStaff": "Edit Staff Member",
+    "createStaff": "Create New Staff Member",
+    "deleteStaff": "Delete Staff Member",
+    "staffName": "Staff Name",
+    "staffNamePlaceholder": "Enter staff name",
+    "emailPlaceholder": "staff@example.com",
+    "password": "Password",
+    "passwordOptional": "Password (leave empty to keep current)",
+    "passwordPlaceholder": "Minimum 6 characters",
+    "deleteConfirm": "Are you sure you want to delete this staff member?",
+    "deleteWarning": "This action cannot be undone.",
+    "failedToLoadStaff": "Failed to load staff members",
+    "staffCreatedSuccess": "Staff member created successfully",
+    "staffUpdatedSuccess": "Staff member updated successfully",
+    "staffDeletedSuccess": "Staff member deleted successfully"
   },
   "admin": {
     "title": "System Administration",

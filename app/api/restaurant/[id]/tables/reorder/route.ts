@@ -19,6 +19,15 @@ export async function PUT(
 
     const { id: restaurantId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     const body = await request.json()
     const { tableIds } = body
@@ -28,11 +37,11 @@ export async function PUT(
     }
 
     // Update sort order for each table
-    const updatePromises = tableIds.map((tableId: string, index: number) => 
+    const updatePromises = tableIds.map((tableId: string, index: number) =>
       prisma.table.update({
-        where: { 
+        where: {
           id: tableId,
-          userId: session.user.id // Ensure table belongs to this user
+          restaurantId: restaurantId // Ensure table belongs to this restaurant
         },
         data: { sortOrder: index }
       })
@@ -42,7 +51,7 @@ export async function PUT(
 
     // Get updated tables
     const tables = await prisma.table.findMany({
-      where: { userId: session.user.id },
+      where: { restaurantId: restaurantId },
       orderBy: [
         { sortOrder: 'asc' },
         { number: 'asc' }

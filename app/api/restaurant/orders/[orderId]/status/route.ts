@@ -39,11 +39,21 @@ export async function PUT(
       )
     }
 
-    // Verify order exists and belongs to user
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
+    // Verify order exists and belongs to user's restaurant
     const existingOrder = await prisma.order.findFirst({
-      where: { 
+      where: {
         id: orderId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       }
     })
 

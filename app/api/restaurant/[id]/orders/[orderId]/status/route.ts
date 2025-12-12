@@ -16,11 +16,20 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _, orderId } = await params
+    const { id: restaurantId, orderId } = await params
     const body = await request.json()
 
-
     const { status, preparingAt, readyAt, servedAt, cookId: _cookId, servedBy } = body
+
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Validate status
     const validStatuses = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'SERVING', 'DELIVERED', 'COMPLETED', 'CANCELLED']
@@ -33,17 +42,17 @@ export async function PUT(
 
     // Build update data
     const updateData: any = { status }
-    
+
     // Add timestamp fields based on status
     if (status === 'PREPARING' && preparingAt) {
       updateData.preparingAt = new Date(preparingAt)
       updateData.cookId = session.user.id // Assign cook
     }
-    
+
     if (status === 'READY' && readyAt) {
       updateData.readyAt = new Date(readyAt)
     }
-    
+
     if (status === 'SERVING' || status === 'DELIVERED') {
       updateData.servedAt = servedAt ? new Date(servedAt) : new Date()
       updateData.servedBy = servedBy || session.user.id
@@ -51,9 +60,9 @@ export async function PUT(
 
     // Update order status with enhanced details
     const updatedOrder = await prisma.order.update({
-      where: { 
+      where: {
         id: orderId,
-        userId: session.user.id // Ensure order belongs to the user
+        restaurantId: restaurantId // Ensure order belongs to the restaurant
       },
       data: updateData,
       include: {
@@ -85,19 +94,19 @@ export async function PUT(
         waiter: {
           select: {
             id: true,
-            ownerName: true
+            name: true
           }
         },
         cook: {
           select: {
             id: true,
-            ownerName: true
+            name: true
           }
         },
         server: {
           select: {
             id: true,
-            ownerName: true
+            name: true
           }
         }
       }
@@ -106,11 +115,11 @@ export async function PUT(
     return NextResponse.json(updatedOrder)
   } catch (error) {
     console.error('Error updating order status:', error)
-    
+
     if (error instanceof Error && error.message.includes('Record to update not found')) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
-    
+
     return NextResponse.json(
       { error: 'Failed to update order status' },
       { status: 500 }

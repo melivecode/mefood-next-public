@@ -16,13 +16,22 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _ } = await params
+    const { id: restaurantId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Fetch menu items with category data
     const menuItems = await prisma.menuItem.findMany({
-      where: { 
-        userId: session.user.id,
+      where: {
+        restaurantId: restaurantId,
         category: {
           isActive: true // Only include items with active categories
         }
@@ -91,11 +100,19 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _ } = await params
+    const { id: restaurantId } = await params
     const body = await request.json()
     const { name, description, price, categoryId, isActive, isAvailable } = body
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
 
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Validate required fields
     if (!name || name.trim().length === 0) {
@@ -119,11 +136,11 @@ export async function POST(
       )
     }
 
-    // Verify category exists and belongs to user
+    // Verify category exists and belongs to restaurant
     const category = await prisma.category.findFirst({
       where: {
         id: categoryId,
-        userId: session.user.id
+        restaurantId: restaurantId
       }
     })
 
@@ -149,7 +166,7 @@ export async function POST(
         description: description?.trim() || null,
         price: parseFloat(price),
         categoryId,
-        userId: session.user.id,
+        restaurantId: restaurantId,
         isActive: Boolean(isActive),
         isAvailable: Boolean(isAvailable),
         sortOrder

@@ -103,16 +103,17 @@ export default function RestaurantAdminPage() {
       requiresRestaurantData: true
     },
     {
-      title: t('restaurantAdmin.analytics'),
-      description: t('restaurantAdmin.analyticsDesc'),
-      icon: <Analytics fontSize="large" />,
-      action: () => {},
-      available: false
-    },
-    {
       title: t('restaurantAdmin.staffManagement'),
       description: t('restaurantAdmin.staffManagementDesc'),
       icon: <People fontSize="large" />,
+      action: () => router.push('/restaurant-admin/staff'),
+      available: hasRestaurant,
+      requiresRestaurantData: true
+    },
+    {
+      title: t('restaurantAdmin.analytics'),
+      description: t('restaurantAdmin.analyticsDesc'),
+      icon: <Analytics fontSize="large" />,
       action: () => {},
       available: false
     },

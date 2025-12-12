@@ -16,10 +16,19 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _, itemId } = await params
+    const { id: restaurantId, itemId } = await params
     const body = await request.json()
     const { name, description, price, categoryId, isActive, isAvailable } = body
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Validate required fields
     if (!name || name.trim().length === 0) {
@@ -43,11 +52,11 @@ export async function PUT(
       )
     }
 
-    // Verify category exists and belongs to user
+    // Verify category exists and belongs to restaurant
     const category = await prisma.category.findFirst({
       where: {
         id: categoryId,
-        userId: session.user.id
+        restaurantId: restaurantId
       }
     })
 
@@ -60,9 +69,9 @@ export async function PUT(
 
     // Update menu item (verify ownership)
     const updatedItem = await prisma.menuItem.update({
-      where: { 
+      where: {
         id: itemId,
-        userId: session.user.id
+        restaurantId: restaurantId
       },
       data: {
         name: name.trim(),
@@ -85,11 +94,11 @@ export async function PUT(
     return NextResponse.json(updatedItem)
   } catch (error) {
     console.error('Error updating menu item:', error)
-    
+
     if (error instanceof Error && error.message.includes('Record to update not found')) {
       return NextResponse.json({ error: 'Menu item not found' }, { status: 404 })
     }
-    
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -108,14 +117,23 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _, itemId } = await params
+    const { id: restaurantId, itemId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
 
-    // Check if menu item exists and belongs to user
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Check if menu item exists and belongs to restaurant
     const menuItem = await prisma.menuItem.findUnique({
-      where: { 
+      where: {
         id: itemId,
-        userId: session.user.id
+        restaurantId: restaurantId
       }
     })
 
@@ -124,9 +142,9 @@ export async function DELETE(
     }
 
     await prisma.menuItem.delete({
-      where: { 
+      where: {
         id: itemId,
-        userId: session.user.id
+        restaurantId: restaurantId
       }
     })
 

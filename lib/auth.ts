@@ -6,8 +6,6 @@ import bcrypt from "bcryptjs"
 const prisma = new PrismaClient()
 
 export const authOptions: NextAuthOptions = {
-  // Remove PrismaAdapter to handle user management manually
-  // adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -23,6 +21,9 @@ export const authOptions: NextAuthOptions = {
         const user = await prisma.user.findUnique({
           where: {
             email: credentials.email
+          },
+          include: {
+            restaurant: true
           }
         })
 
@@ -42,9 +43,11 @@ export const authOptions: NextAuthOptions = {
         return {
           id: user.id,
           email: user.email,
-          restaurantName: user.restaurantName,
-          ownerName: user.ownerName,
-          ownerImage: user.ownerImage
+          name: user.name,
+          image: user.image,
+          restaurantId: user.restaurantId,
+          restaurantName: user.restaurant?.name || null,
+          role: user.role
         } as any
       }
     })
@@ -56,15 +59,15 @@ export const authOptions: NextAuthOptions = {
     signIn: "/auth/signin",
   },
   callbacks: {
-    async signIn({ account, profile }) {
+    async signIn({ account }) {
       try {
         // Always allow credentials sign in
         if (account?.provider === "credentials") {
           return true
         }
-        
+
         return true
-      } catch (error) {
+      } catch {
         return false
       }
     },
@@ -72,12 +75,14 @@ export const authOptions: NextAuthOptions = {
       try {
         if (user) {
           token.id = user.id
+          token.name = user.name
+          token.restaurantId = user.restaurantId
           token.restaurantName = user.restaurantName
-          token.ownerName = user.ownerName
+          token.role = user.role
         }
-        
+
         return token
-      } catch (error) {
+      } catch {
         return token
       }
     },
@@ -85,11 +90,13 @@ export const authOptions: NextAuthOptions = {
       try {
         if (token) {
           session.user.id = token.id as string
-          session.user.restaurantName = token.restaurantName as string
-          session.user.ownerName = token.ownerName as string | null
+          session.user.name = token.name as string | null
+          session.user.restaurantId = token.restaurantId as string | null
+          session.user.restaurantName = token.restaurantName as string | null
+          session.user.role = token.role as "ADMIN" | "STAFF"
         }
         return session
-      } catch (error) {
+      } catch {
         return session
       }
     },

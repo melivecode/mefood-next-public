@@ -16,9 +16,18 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _ } = await params
+    const { id: restaurantId } = await params
     const { searchParams } = new URL(request.url)
-    
+
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Parse query parameters
     const page = parseInt(searchParams.get('page') || '1')
@@ -28,12 +37,12 @@ export async function GET(
     const paymentMethod = searchParams.get('paymentMethod')
     const searchTerm = searchParams.get('search')
     const sessionId = searchParams.get('sessionId')
-    
+
     const skip = (page - 1) * limit
 
     // Build where clause
     const where: any = {
-      userId: session.user.id
+      restaurantId: restaurantId
     }
 
     if (startDate && endDate) {
@@ -87,7 +96,7 @@ export async function GET(
     // Calculate summary statistics
     const summaryWhere = { ...where }
     delete summaryWhere.OR // Remove search term for summary stats
-    
+
     const summary = await prisma.payment.aggregate({
       where: summaryWhere,
       _sum: {

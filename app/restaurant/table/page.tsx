@@ -65,6 +65,12 @@ interface CustomerSession {
   checkInTime: string
   seatedTime: string | null
   notes: string | null
+  orders?: {
+    id: string
+    status: string
+    totalAmount: string
+    items: any[]
+  }[]
 }
 
 interface Table {
@@ -269,11 +275,23 @@ export default function CustomerCheckInPage() {
   const handleCheckout = (tableId: string, sessionId: string) => {
     const session = sessions.find(s => s.id === sessionId)
     const table = tables.find(t => t.id === tableId)
-    setSessionToCheckout({ 
-      tableId, 
-      sessionId, 
+    setSessionToCheckout({
+      tableId,
+      sessionId,
       customerName: session?.customerName || t('table.guestFallback'),
       tableName: table?.name || t('table.tableNameFallback', { number: table?.number })
+    })
+    setCheckoutDialog(true)
+  }
+
+  // Checkout for waiting customers (without table)
+  const handleCheckoutSession = (sessionId: string) => {
+    const session = sessions.find(s => s.id === sessionId)
+    setSessionToCheckout({
+      tableId: '',
+      sessionId,
+      customerName: session?.customerName || t('table.guestFallback'),
+      tableName: t('session.takeaway')
     })
     setCheckoutDialog(true)
   }
@@ -489,25 +507,113 @@ export default function CustomerCheckInPage() {
                                 💬 {session.notes}
                               </Typography>
                             )}
+                            {/* Order, Bill, Checkout buttons */}
+                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', justifyContent: 'center', mt: 1 }}>
+                              <Button
+                                size="small"
+                                variant="contained"
+                                startIcon={<Restaurant sx={{ fontSize: { xs: 16, sm: 14, md: 14 } }} />}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  router.push(`/restaurant/session/${session.id}`)
+                                }}
+                                sx={{
+                                  minWidth: 'auto',
+                                  px: { xs: 1.5, sm: 1, md: 1 },
+                                  fontSize: { xs: '0.85rem', sm: '0.75rem', md: '0.75rem' },
+                                  height: { xs: 32, sm: 26, md: 26 },
+                                  color: 'black',
+                                  backgroundColor: 'primary.main',
+                                  '&:hover': {
+                                    backgroundColor: 'primary.dark',
+                                    color: 'white'
+                                  }
+                                }}
+                              >
+                                {t('table.order')}
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="contained"
+                                startIcon={<Receipt sx={{ fontSize: { xs: 16, sm: 14, md: 14 } }} />}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  router.push(`/restaurant/billing?sessionId=${session.id}`)
+                                }}
+                                sx={{
+                                  minWidth: 'auto',
+                                  px: { xs: 1.5, sm: 1, md: 1 },
+                                  fontSize: { xs: '0.85rem', sm: '0.75rem', md: '0.75rem' },
+                                  height: { xs: 32, sm: 26, md: 26 },
+                                  color: 'black',
+                                  backgroundColor: 'warning.light',
+                                  '&:hover': {
+                                    backgroundColor: 'warning.main',
+                                    color: 'black'
+                                  }
+                                }}
+                              >
+                                {t('table.bill')}
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="contained"
+                                startIcon={<ExitToApp sx={{ fontSize: { xs: 16, sm: 14, md: 14 } }} />}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleCheckoutSession(session.id)
+                                }}
+                                sx={{
+                                  minWidth: 'auto',
+                                  px: { xs: 1.5, sm: 1, md: 1 },
+                                  fontSize: { xs: '0.85rem', sm: '0.75rem', md: '0.75rem' },
+                                  height: { xs: 32, sm: 26, md: 26 },
+                                  color: 'white',
+                                  backgroundColor: 'success.dark',
+                                  '&:hover': {
+                                    backgroundColor: '#1B5E20'
+                                  }
+                                }}
+                              >
+                                {t('table.checkOut')}
+                              </Button>
+                            </Box>
+                            {/* Seat button - separate line */}
                             <Button
-                              variant={selectedSession?.id === session.id ? "contained" : "outlined"}
                               size="small"
-                              startIcon={<Person />}
-                              onClick={() => {
+                              variant={selectedSession?.id === session.id ? "contained" : "outlined"}
+                              fullWidth
+                              startIcon={<TableBar sx={{ fontSize: { xs: 16, sm: 14, md: 14 } }} />}
+                              onClick={(e) => {
+                                e.stopPropagation()
                                 setSelectedSession(session)
                                 setSelectedTableFromFloor(null)
                                 setSeatForm({ tableId: '' })
                               }}
-                              sx={{ 
-                                width: '100%',
-                                borderRadius: 2, 
+                              sx={{
+                                mt: 1,
+                                px: { xs: 1.5, sm: 1, md: 1 },
+                                fontSize: { xs: '0.85rem', sm: '0.75rem', md: '0.75rem' },
+                                height: { xs: 32, sm: 26, md: 26 },
                                 textTransform: 'none',
                                 fontWeight: 600,
-                                fontSize: { xs: '0.9rem', sm: '0.95rem', md: '0.875rem' },
-                                py: { xs: 0.5, md: 1 }
+                                ...(selectedSession?.id === session.id ? {
+                                  color: 'white',
+                                  backgroundColor: 'grey.700',
+                                  '&:hover': {
+                                    backgroundColor: 'grey.800'
+                                  }
+                                } : {
+                                  borderColor: 'grey.600',
+                                  color: 'grey.700',
+                                  '&:hover': {
+                                    backgroundColor: 'grey.100',
+                                    borderColor: 'grey.700'
+                                  }
+                                })
                               }}
                             >
-                              {selectedSession?.id === session.id ? t('table.selected') : t('table.selectToSeat')}
+                              {selectedSession?.id === session.id ? t('table.selected') : t('table.seat')}
                             </Button>
                           </Box>
                         </CardContent>

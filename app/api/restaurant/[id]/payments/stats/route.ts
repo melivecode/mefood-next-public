@@ -11,26 +11,26 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { id: restaurantId } = await params
 
-    // Get user restaurant info
+    // Get user's restaurant to verify access
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, restaurantName: true }
+      select: { restaurantId: true }
     })
 
-    if (!user || !user.restaurantName) {
-      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
     // Get total revenue and payment count
     const revenueResult = await prisma.payment.aggregate({
-      where: { userId: session.user.id },
+      where: { restaurantId: restaurantId },
       _sum: { finalAmount: true },
       _count: { id: true },
       _avg: { finalAmount: true }
@@ -39,7 +39,7 @@ export async function GET(
     // Get payment method breakdown
     const paymentMethodBreakdown = await prisma.payment.groupBy({
       by: ['paymentMethod'],
-      where: { userId: session.user.id },
+      where: { restaurantId: restaurantId },
       _count: { id: true },
       _sum: { finalAmount: true }
     })

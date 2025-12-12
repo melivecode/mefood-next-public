@@ -100,11 +100,13 @@ function BillingPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tableId = searchParams.get('tableId')
+  const sessionId = searchParams.get('sessionId')
   // Simplified for one-user-one-restaurant system
   const { t } = useTranslation()
 
-  // Check if this is table-specific billing or general billing view
+  // Check if this is table-specific billing, session billing, or general billing view
   const isTableBilling = !!tableId
+  const isSessionBilling = !!sessionId && !tableId
 
   // Table billing states
   const [billData, setBillData] = useState<BillData | null>(null)
@@ -153,11 +155,13 @@ function BillingPageContent() {
     if (session?.user?.id) {
       if (isTableBilling && tableId) {
         fetchBillData()
+      } else if (isSessionBilling && sessionId) {
+        fetchBillDataBySession()
       } else {
         fetchOrders()
       }
     }
-  }, [session?.user?.id, tableId, isTableBilling])
+  }, [session?.user?.id, tableId, sessionId, isTableBilling, isSessionBilling])
 
   const fetchBillData = async () => {
     try {
@@ -225,6 +229,94 @@ function BillingPageContent() {
           restaurant: tableData.restaurant // Include restaurant data
         },
         session: tableData.session,
+        orders: consolidatedOrders,
+        totalAmount,
+        totalItems
+      })
+
+      // Set initial received amount to total
+      setReceivedAmount(totalAmount.toFixed(2))
+    } catch (err) {
+      setError(t('billing.failedToLoadBilling'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchBillDataBySession = async () => {
+    try {
+      // Fetch session info directly
+      const sessionRes = await fetch(`/api/restaurant/sessions/${sessionId}`)
+      if (!sessionRes.ok) throw new Error('Failed to fetch session data')
+
+      const sessionData = await sessionRes.json()
+
+      // Fetch orders for this session
+      const ordersRes = await fetch(`/api/restaurant/orders`)
+      if (!ordersRes.ok) throw new Error('Failed to fetch orders')
+
+      const allOrders = await ordersRes.json()
+
+      // Get orders that are not completed and not cancelled for billing
+      const sessionOrders = allOrders.filter((order: any) =>
+        order.sessionId === sessionId &&
+        order.status !== 'COMPLETED' &&
+        order.status !== 'CANCELLED'
+      )
+
+      // Group orders: only show main orders (those without mainOrderId) and include sub-orders within them
+      const mainOrders = sessionOrders.filter((order: any) => !order.mainOrderId)
+
+      // For each main order, collect all its items including from sub-orders
+      const consolidatedOrders = mainOrders.map((mainOrder: any) => {
+        const subOrders = sessionOrders.filter((order: any) => order.mainOrderId === mainOrder.id)
+
+        // Combine all items from main order and sub-orders
+        let allItems = [...mainOrder.items]
+        let totalAmount = parseFloat(mainOrder.totalAmount)
+
+        subOrders.forEach((subOrder: any) => {
+          allItems = [...allItems, ...subOrder.items]
+          totalAmount += parseFloat(subOrder.totalAmount)
+        })
+
+        return {
+          ...mainOrder,
+          items: allItems,
+          totalAmount: totalAmount,
+          subOrders: subOrders,
+          subOrderCount: subOrders.length
+        }
+      })
+
+      // Calculate totals
+      const totalAmount = consolidatedOrders.reduce((sum: number, order: any) =>
+        sum + order.totalAmount, 0
+      )
+      const totalItems = consolidatedOrders.reduce((sum: number, order: any) =>
+        sum + order.items.reduce((itemSum: number, item: any) => itemSum + item.quantity, 0), 0
+      )
+
+      setBillData({
+        table: sessionData.table ? {
+          id: sessionData.table.id,
+          number: sessionData.table.number,
+          name: sessionData.table.name,
+          restaurant: sessionData.restaurant || { id: '', name: 'Restaurant', address: null, phone: null }
+        } : {
+          id: '',
+          number: 'Takeaway',
+          name: t('session.takeaway'),
+          restaurant: sessionData.restaurant || { id: '', name: 'Restaurant', address: null, phone: null }
+        },
+        session: {
+          id: sessionData.id,
+          customerName: sessionData.customerName,
+          customerPhone: sessionData.customerPhone,
+          customerEmail: sessionData.customerEmail,
+          partySize: sessionData.partySize,
+          checkInTime: sessionData.checkInTime
+        },
         orders: consolidatedOrders,
         totalAmount,
         totalItems
@@ -346,6 +438,11 @@ function BillingPageContent() {
 
       await Promise.all(updatePromises)
 
+      // Collect order IDs that are being paid
+      const orderIds = billData.orders
+        .filter(order => order.status !== 'COMPLETED' && order.status !== 'CANCELLED')
+        .map(order => order.id)
+
       // Process the payment (doesn't checkout the customer yet)
       const sessionRes = await fetch(`/api/restaurant/sessions/${billData.session.id}/payment`, {
         method: 'PUT',
@@ -354,13 +451,14 @@ function BillingPageContent() {
           paymentMethod,
           totalAmount: billData.totalAmount,
           extraCharges: extraCharges,
-          discountAmount: discountPercent > 0 
+          discountAmount: discountPercent > 0
             ? (billData.totalAmount * discountPercent / 100)
             : discountAmount,
           finalAmount: calculateFinalAmount(),
           receivedAmount: parseFloat(receivedAmount) || 0,
           changeAmount: calculateChange(),
-          notes
+          notes,
+          orderIds // Send order IDs being paid
         })
       })
 
@@ -396,24 +494,27 @@ function BillingPageContent() {
     )
   }
 
-  // Table-specific billing view
-  if (isTableBilling) {
+  // Table-specific or Session-specific billing view
+  if (isTableBilling || isSessionBilling) {
     if (!billData) {
       return (
         <>
-          <Navbar 
+          <Navbar
             leftAction={
               <Button
                 color="inherit"
                 startIcon={<TableBar />}
-                onClick={() => router.push(`/restaurant/table/${tableId}`)}
-                sx={{ 
+                onClick={() => isSessionBilling
+                  ? router.push(`/restaurant/session/${sessionId}`)
+                  : router.push(`/restaurant/table/${tableId}`)
+                }
+                sx={{
                   textTransform: 'none',
                   fontWeight: 500,
                   fontSize: { xs: '0.875rem', md: '1rem' }
                 }}
               >
-                {t('billing.backToTable')}
+                {isSessionBilling ? t('billing.backToSession') : t('billing.backToTable')}
               </Button>
             }
             rightAction={<LanguageSwitcher />}
@@ -422,8 +523,8 @@ function BillingPageContent() {
             <Alert severity="error">
               {error || t('billing.noBillingData')}
             </Alert>
-            <Button 
-              startIcon={<ArrowBack />} 
+            <Button
+              startIcon={<ArrowBack />}
               onClick={() => router.push('/restaurant/table')}
               sx={{ mt: 2 }}
             >
@@ -437,19 +538,25 @@ function BillingPageContent() {
 
     return (
       <>
-        <Navbar 
+        <Navbar
           leftAction={
             <Button
               color="inherit"
               startIcon={<TableBar />}
-              onClick={() => router.push(`/restaurant/table/${tableId}`)}
-              sx={{ 
+              onClick={() => isSessionBilling
+                ? router.push(`/restaurant/session/${sessionId}`)
+                : router.push(`/restaurant/table/${tableId}`)
+              }
+              sx={{
                 textTransform: 'none',
                 fontWeight: 500,
                 fontSize: { xs: '0.875rem', md: '1rem' }
               }}
             >
-              {t('billing.backToTableNumber', { number: billData.table.number, name: billData.table.name ? ` (${billData.table.name})` : '' })}
+              {isSessionBilling
+                ? t('billing.backToSession')
+                : t('billing.backToTableNumber', { number: billData.table.number, name: billData.table.name ? ` (${billData.table.name})` : '' })
+              }
             </Button>
           }
           rightAction={<LanguageSwitcher />}
@@ -568,7 +675,7 @@ function BillingPageContent() {
                                     )}
                                   </TableCell>
                                   <TableCell align="right">
-                                    B {(parseFloat(item.price) * item.quantity).toFixed(2)}
+                                    ฿{(parseFloat(item.price) * item.quantity).toFixed(2)}
                                   </TableCell>
                                 </TableRow>
                               )
@@ -588,7 +695,7 @@ function BillingPageContent() {
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                       <Typography>{t('billing.subtotal', { count: billData.totalItems })}</Typography>
                       <Typography sx={{ fontWeight: 600 }}>
-                        B {billData.totalAmount.toFixed(2)}
+                        ฿{billData.totalAmount.toFixed(2)}
                       </Typography>
                     </Box>
                     
@@ -598,7 +705,7 @@ function BillingPageContent() {
                           {charge.description} {charge.isPercentage && `(${charge.amount}%)`}
                         </Typography>
                         <Typography sx={{ fontWeight: 600 }}>
-                          +B {(charge.isPercentage 
+                          +฿{(charge.isPercentage 
                             ? (billData.totalAmount * charge.amount / 100)
                             : charge.amount
                           ).toFixed(2)}
@@ -612,7 +719,7 @@ function BillingPageContent() {
                           {t('billing.discount')} {discountPercent > 0 && `(${discountPercent}%)`}
                         </Typography>
                         <Typography sx={{ fontWeight: 600 }}>
-                          -B {(discountPercent > 0 
+                          -฿{(discountPercent > 0 
                             ? (billData.totalAmount * discountPercent / 100)
                             : discountAmount
                           ).toFixed(2)}
@@ -627,7 +734,7 @@ function BillingPageContent() {
                         {t('billing.totalAmount')}
                       </Typography>
                       <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.dark' }}>
-                        B {calculateFinalAmount().toFixed(2)}
+                        ฿{calculateFinalAmount().toFixed(2)}
                       </Typography>
                     </Box>
                   </Box>
@@ -676,7 +783,7 @@ function BillingPageContent() {
                   </Box>
                   
                   <Typography variant="body2" sx={{ color: 'white', opacity: 0.9 }}>
-                    {t('billing.totalAmount')}: B {calculateFinalAmount().toFixed(2)}
+                    {t('billing.totalAmount')}: ฿{calculateFinalAmount().toFixed(2)}
                   </Typography>
                 </Box>
                 
@@ -839,7 +946,7 @@ function BillingPageContent() {
                               </Typography>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Typography variant="body2" sx={{ fontWeight: 600, color: 'warning.dark' }}>
-                                  +B {(charge.isPercentage 
+                                  +฿{(charge.isPercentage 
                                     ? (billData.totalAmount * charge.amount / 100)
                                     : charge.amount
                                   ).toFixed(2)}
@@ -868,7 +975,7 @@ function BillingPageContent() {
                             p: 1,
                             borderRadius: 1
                           }}>
-                            {t('billing.totalExtraCharges')}: +B {extraCharges.reduce((total, charge) => {
+                            {t('billing.totalExtraCharges')}: +฿{extraCharges.reduce((total, charge) => {
                               if (charge.isPercentage) {
                                 return total + (billData.totalAmount * charge.amount / 100)
                               }
@@ -975,7 +1082,7 @@ function BillingPageContent() {
                               justifyContent: 'center'
                             }}>
                               <Typography variant="body1" sx={{ fontWeight: 600, color: 'success.dark' }}>
-                                {t('billing.change')}: B {calculateChange().toFixed(2)}
+                                {t('billing.change')}: ฿{calculateChange().toFixed(2)}
                               </Typography>
                             </Box>
                           )}
@@ -1134,7 +1241,7 @@ function BillingPageContent() {
             </Box>
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="h5" sx={{ fontWeight: 700, color: 'success.main' }}>
-                B {totalRevenue.toFixed(2)}
+                ฿{totalRevenue.toFixed(2)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {t('billing.totalRevenue')}

@@ -16,13 +16,23 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const { orderId } = await params
 
-    // Verify order exists and belongs to user
+    // Verify order exists and belongs to user's restaurant
     const order = await prisma.order.findFirst({
-      where: { 
+      where: {
         id: orderId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       }
     })
 
@@ -62,15 +72,25 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const { orderId } = await params
     const body = await request.json()
     const { menuItemId, quantity, price, notes, selections } = body
 
-    // Verify order exists and belongs to user
+    // Verify order exists and belongs to user's restaurant
     const order = await prisma.order.findFirst({
-      where: { 
+      where: {
         id: orderId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       }
     })
 
@@ -78,11 +98,11 @@ export async function POST(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // Verify menu item exists and belongs to user
+    // Verify menu item exists and belongs to user's restaurant
     const menuItem = await prisma.menuItem.findFirst({
-      where: { 
+      where: {
         id: menuItemId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       }
     })
 

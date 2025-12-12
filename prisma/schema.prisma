@@ -40,44 +40,58 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// Restaurant Model - Central entity for restaurant data
+model Restaurant {
+  id           String     @id @default(cuid())
+  name         String
+  description  String?
+  address      String?
+  phone        String?
+  email        String?
+  isActive     Boolean    @default(true)
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Relations
+  users            User[]
+  categories       Category[]
+  menuItems        MenuItem[]
+  tables           Table[]
+  customerSessions CustomerSession[]
+  orders           Order[]
+  payments         Payment[]
+  settings         RestaurantSettings?
+}
+
 model User {
   id            String    @id @default(cuid())
-  
+
   // Authentication fields
   email         String    @unique
   password      String?
   emailVerified DateTime?
-  
+  role          UserRole  @default(ADMIN)  // User role for access control
+
   // User profile
-  ownerName     String?   // Restaurant owner's name
-  ownerImage    String?
-  
-  // Restaurant information (merged from Restaurant model)
-  restaurantName        String?
-  restaurantDescription String?
-  restaurantAddress     String?
-  restaurantPhone       String?
-  restaurantEmail       String?
-  isRestaurantActive    Boolean  @default(true)
-  
+  name          String?   // User's display name
+  image         String?
+
+  // Restaurant association
+  restaurantId  String?
+  restaurant    Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  
+
   // Relations
   accounts        Account[]
   sessions        Session[]
-  categories      Category[]
-  menuItems       MenuItem[]
-  orders          Order[] @relation("UserOrders")
-  tables          Table[]
-  customerSessions CustomerSession[] @relation("UserSessions")
-  payments        Payment[]
-  settings        RestaurantSettings?
-  
-  // Staff relations (for future multi-staff support)
+
+  // Staff relations (for staff assignments)
   waitingSessions CustomerSession[] @relation("WaiterSessions")
   waitingOrders   Order[] @relation("OrderWaiter")
-  cookingOrders   Order[] @relation("OrderCook")  
+  cookingOrders   Order[] @relation("OrderCook")
   servedOrders    Order[] @relation("OrderServer")
 }
 
@@ -103,14 +117,14 @@ model Table {
   gridY        Int        @default(0)  // Grid row position
   gridWidth    Int        @default(2)  // Width in grid units
   gridHeight   Int        @default(2)  // Height in grid units
-  userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   orders       Order[]
   sessions     CustomerSession[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  @@unique([userId, number])
+  @@unique([restaurantId, number])
 }
 
 // Menu Management Models
@@ -120,13 +134,13 @@ model Category {
   description  String?
   isActive     Boolean    @default(true)
   sortOrder    Int        @default(0)
-  userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   menuItems    MenuItem[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  @@unique([userId, name])
+  @@unique([restaurantId, name])
 }
 
 model MenuItem {
@@ -138,9 +152,9 @@ model MenuItem {
   isActive     Boolean    @default(true)
   isAvailable  Boolean    @default(true)
   sortOrder    Int        @default(0)
-  userId       String
+  restaurantId String
   categoryId   String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   category     Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   orderItems   OrderItem[]
   selections   Selection[]
@@ -184,13 +198,13 @@ model CustomerSession {
   partySize    Int               @default(1)
   status       SessionStatus     @default(WAITING)
   tableId      String?
-  userId       String
+  restaurantId String
   waiterId     String?           // Staff member handling the table
   checkInTime  DateTime          @default(now())
   seatedTime   DateTime?
   checkOutTime DateTime?
   notes        String?
-  user         User              @relation("UserSessions", fields: [userId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   table        Table?            @relation(fields: [tableId], references: [id], onDelete: SetNull)
   waiter       User?             @relation("WaiterSessions", fields: [waiterId], references: [id], onDelete: SetNull)
   orders       Order[]
@@ -211,6 +225,11 @@ enum SessionStatus {
   CANCELLED     // Session cancelled
 }
 
+enum UserRole {
+  ADMIN         // Restaurant owner/admin - full access
+  STAFF         // Staff member - limited access (no admin pages)
+}
+
 // Order Management Models
 model Order {
   id             String         @id @default(cuid())
@@ -227,7 +246,7 @@ model Order {
   notes          String?
   tableId        String?        // Optional table for dine-in orders
   sessionId      String?        // Link to customer session
-  userId         String
+  restaurantId   String
   waiterId       String?        // Staff member who took the order
   cookId         String?        // Kitchen staff assigned to prepare
   servedBy       String?        // Staff member who served the order
@@ -235,7 +254,7 @@ model Order {
   preparingAt    DateTime?      // When kitchen started preparing
   readyAt        DateTime?      // When order is ready to serve
   servedAt       DateTime?      // When order was served
-  user           User           @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
+  restaurant     Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   table          Table?         @relation(fields: [tableId], references: [id], onDelete: SetNull)
   session        CustomerSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   waiter         User?          @relation("OrderWaiter", fields: [waiterId], references: [id], onDelete: SetNull)
@@ -276,8 +295,8 @@ model Payment {
   id                String            @id @default(cuid())
   paymentNumber     String            // Unique payment/receipt number
   sessionId         String            // Reference to customer session
-  userId            String
-  
+  restaurantId      String
+
   // Session and table snapshot data (copied at payment time)
   customerName      String?
   customerPhone     String?
@@ -287,12 +306,12 @@ model Payment {
   tableName         String?           // Table name at payment time
   checkInTime       DateTime
   checkOutTime      DateTime
-  
+
   // Restaurant snapshot data
   restaurantName    String            // Restaurant name at payment time
   restaurantAddress String?           // Restaurant address at payment time
   restaurantPhone   String?           // Restaurant phone at payment time
-  
+
   // Payment details
   paymentMethod     PaymentMethod     @default(CASH)
   subtotalAmount    Decimal           @db.Decimal(10, 2) // Total of all items
@@ -301,42 +320,42 @@ model Payment {
   finalAmount       Decimal           @db.Decimal(10, 2) // Amount after charges/discounts
   receivedAmount    Decimal?          @db.Decimal(10, 2) // For cash payments
   changeAmount      Decimal?          @db.Decimal(10, 2) // For cash payments
-  
+
   // Additional data
   notes             String?           @db.Text
   extraCharges      Json?             // Store extra charges as JSON array
-  
+
   // Relations
   session           CustomerSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant        Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   items             PaymentItem[]     // Snapshot of ordered items
-  
+
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
-  
-  @@unique([userId, paymentNumber])
+
+  @@unique([restaurantId, paymentNumber])
 }
 
 model PaymentItem {
   id                String    @id @default(cuid())
   paymentId         String
-  
+
   // Menu item snapshot data (copied at payment time)
   menuItemName      String
   menuItemDescription String?
   menuItemPrice     Decimal   @db.Decimal(10, 2)
   categoryName      String
-  
+
   // Order item data
   quantity          Int
   unitPrice         Decimal   @db.Decimal(10, 2) // Price per unit including selections
   totalPrice        Decimal   @db.Decimal(10, 2) // quantity * unitPrice
   notes             String?   @db.Text
   selections        Json?     // Selected options as JSON
-  
+
   // Relations
   payment           Payment   @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 }
@@ -348,10 +367,10 @@ enum PaymentMethod {
   DEBIT_CARD
 }
 
-// Restaurant Settings Model (now User Settings)
+// Restaurant Settings Model
 model RestaurantSettings {
   id                    String     @id @default(cuid())
-  userId                String     @unique
+  restaurantId          String     @unique
   allowOnlineOrdering   Boolean    @default(true)
   acceptCashPayments    Boolean    @default(true)
   acceptCardPayments    Boolean    @default(false)
@@ -361,7 +380,7 @@ model RestaurantSettings {
   deliveryFee           Decimal?   @db.Decimal(10, 2)
   estimatedPrepTime     Int        @default(30) // minutes
   operatingHours        Json?      // Store as JSON for flexibility
-  user                  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant            Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   createdAt             DateTime   @default(now())
   updatedAt             DateTime   @updatedAt
 }

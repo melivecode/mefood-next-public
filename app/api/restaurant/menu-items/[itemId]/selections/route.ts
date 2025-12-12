@@ -16,13 +16,23 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const { itemId } = await params
 
-    // Verify menu item exists and belongs to user
+    // Verify menu item exists and belongs to user's restaurant
     const menuItem = await prisma.menuItem.findFirst({
-      where: { 
+      where: {
         id: itemId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       }
     })
 
@@ -61,15 +71,25 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const { itemId } = await params
     const body = await request.json()
     const { name, description, isRequired, allowMultiple, sortOrder, options } = body
 
-    // Verify menu item exists and belongs to user
+    // Verify menu item exists and belongs to user's restaurant
     const menuItem = await prisma.menuItem.findFirst({
-      where: { 
+      where: {
         id: itemId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       }
     })
 

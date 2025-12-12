@@ -16,15 +16,33 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const { sessionId } = await params
 
     const customerSession = await prisma.customerSession.findFirst({
-      where: { 
+      where: {
         id: sessionId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       },
       include: {
         table: true,
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            phone: true
+          }
+        },
         orders: {
           include: {
             items: {
@@ -70,22 +88,32 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const { sessionId } = await params
     const body = await request.json()
-    const { 
-      customerName, 
-      customerPhone, 
-      customerEmail, 
-      partySize, 
-      status, 
-      notes 
+    const {
+      customerName,
+      customerPhone,
+      customerEmail,
+      partySize,
+      status,
+      notes
     } = body
 
-    // Verify session exists and belongs to user
+    // Verify session exists and belongs to user's restaurant
     const existingSession = await prisma.customerSession.findFirst({
-      where: { 
+      where: {
         id: sessionId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       }
     })
 
@@ -143,19 +171,29 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const { sessionId } = await params
 
-    // Verify session exists and belongs to user
+    // Verify session exists and belongs to user's restaurant
     const existingSession = await prisma.customerSession.findFirst({
-      where: { 
+      where: {
         id: sessionId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       },
       include: {
         _count: {
-          select: { 
+          select: {
             orders: true,
-            payments: true 
+            payments: true
           }
         }
       }

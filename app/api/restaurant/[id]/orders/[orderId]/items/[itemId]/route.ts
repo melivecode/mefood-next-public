@@ -16,15 +16,24 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _, orderId, itemId } = await params
+    const { id: restaurantId, orderId, itemId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
 
-    // Get the order item to be deleted (verify ownership)
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Get the order item to be deleted (verify ownership through order)
     const orderItem = await prisma.orderItem.findFirst({
-      where: { 
+      where: {
         id: itemId,
         order: {
-          userId: session.user.id
+          restaurantId: restaurantId
         }
       },
       include: {
@@ -43,8 +52,8 @@ export async function DELETE(
     // Check if order is in a state that allows modification
     const modifiableStatuses = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'SERVING', 'DELIVERED']
     if (!modifiableStatuses.includes(orderItem.order.status)) {
-      return NextResponse.json({ 
-        error: `Cannot delete items from ${orderItem.order.status.toLowerCase()} orders. Items can only be deleted from orders with status: ${modifiableStatuses.join(', ')}` 
+      return NextResponse.json({
+        error: `Cannot delete items from ${orderItem.order.status.toLowerCase()} orders. Items can only be deleted from orders with status: ${modifiableStatuses.join(', ')}`
       }, { status: 400 })
     }
 
@@ -58,9 +67,9 @@ export async function DELETE(
 
     // Update the order total amount (verify ownership)
     const updatedOrder = await prisma.order.update({
-      where: { 
+      where: {
         id: orderId,
-        userId: session.user.id
+        restaurantId: restaurantId
       },
       data: {
         totalAmount: {
@@ -87,15 +96,15 @@ export async function DELETE(
     // If order has no more items, you might want to cancel it
     if (updatedOrder.items.length === 0) {
       await prisma.order.update({
-        where: { 
+        where: {
           id: orderId,
-          userId: session.user.id
+          restaurantId: restaurantId
         },
         data: { status: 'CANCELLED' }
       })
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Order item removed successfully',
       order: updatedOrder
     })

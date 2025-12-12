@@ -12,16 +12,16 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id) {
+    if (!session?.user?.restaurantId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { paymentId } = await params
 
     const payment = await prisma.payment.findFirst({
-      where: { 
+      where: {
         id: paymentId,
-        userId: session.user.id 
+        restaurantId: session.user.restaurantId
       },
       include: {
         items: true,
@@ -54,18 +54,18 @@ export async function PUT(
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id) {
+    if (!session?.user?.restaurantId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { paymentId } = await params
     const body = await request.json()
 
-    // Verify payment exists and belongs to user
+    // Verify payment exists and belongs to restaurant
     const existingPayment = await prisma.payment.findFirst({
-      where: { 
+      where: {
         id: paymentId,
-        userId: session.user.id 
+        restaurantId: session.user.restaurantId
       }
     })
 

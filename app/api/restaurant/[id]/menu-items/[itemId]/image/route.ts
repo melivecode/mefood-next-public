@@ -19,14 +19,23 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _, itemId } = await params
+    const { id: restaurantId, itemId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
 
-    // Check if menu item exists and belongs to user
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Check if menu item exists and belongs to the restaurant
     const menuItem = await prisma.menuItem.findFirst({
       where: {
         id: itemId,
-        userId: session.user.id
+        restaurantId: user.restaurantId
       }
     })
 
@@ -47,8 +56,8 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid file type. Only JPG, JPEG, and PNG are allowed.' }, { status: 400 })
     }
 
-    // Create upload directory
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', session.user.id, itemId)
+    // Create upload directory using restaurantId
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', restaurantId, itemId)
     await fs.mkdir(uploadsDir, { recursive: true })
 
     // Get next running number
@@ -74,9 +83,8 @@ export async function POST(
     await fs.writeFile(filepath, processedImage)
 
     // Update database with API endpoint path for dynamic serving
-    // Using /api/images/ instead of /uploads/ to serve dynamically
-    const imagePath = `/api/images/${session.user.id}/${itemId}/${filename}`
-    
+    const imagePath = `/api/images/${restaurantId}/${itemId}/${filename}`
+
     await prisma.menuItem.update({
       where: { id: itemId },
       data: { image: imagePath }
@@ -108,14 +116,23 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _, itemId } = await params
+    const { id: restaurantId, itemId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Get menu item with current image
     const menuItem = await prisma.menuItem.findFirst({
       where: {
         id: itemId,
-        userId: session.user.id
+        restaurantId: user.restaurantId
       }
     })
 
@@ -147,8 +164,8 @@ export async function PUT(
       }
     }
 
-    // Create upload directory
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', session.user.id, itemId)
+    // Create upload directory using restaurantId
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', restaurantId, itemId)
     await fs.mkdir(uploadsDir, { recursive: true })
 
     // Get next running number
@@ -174,9 +191,8 @@ export async function PUT(
     await fs.writeFile(filepath, processedImage)
 
     // Update database with API endpoint path for dynamic serving
-    // Using /api/images/ instead of /uploads/ to serve dynamically
-    const imagePath = `/api/images/${session.user.id}/${itemId}/${filename}`
-    
+    const imagePath = `/api/images/${restaurantId}/${itemId}/${filename}`
+
     await prisma.menuItem.update({
       where: { id: itemId },
       data: { image: imagePath }
@@ -208,14 +224,23 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _, itemId } = await params
+    const { id: restaurantId, itemId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Get menu item with current image
     const menuItem = await prisma.menuItem.findFirst({
       where: {
         id: itemId,
-        userId: session.user.id
+        restaurantId: user.restaurantId
       }
     })
 

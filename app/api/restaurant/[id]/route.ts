@@ -5,7 +5,10 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-export async function GET() {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -13,37 +16,36 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch restaurant details from User model
+    const { id: restaurantId } = await params
+
+    // Get user's restaurant to verify access
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Fetch restaurant details from Restaurant model
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
       select: {
         id: true,
-        restaurantName: true,
-        restaurantDescription: true,
-        restaurantAddress: true,
-        restaurantPhone: true,
-        restaurantEmail: true,
-        isRestaurantActive: true,
+        name: true,
+        description: true,
+        address: true,
+        phone: true,
+        email: true,
+        isActive: true,
         createdAt: true,
         updatedAt: true
       }
     })
 
-    if (!user) {
+    if (!restaurant) {
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
-    }
-
-    // Transform to match expected restaurant format
-    const restaurant = {
-      id: user.id,
-      name: user.restaurantName,
-      description: user.restaurantDescription,
-      address: user.restaurantAddress,
-      phone: user.restaurantPhone,
-      email: user.restaurantEmail,
-      isActive: user.isRestaurantActive,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt
     }
 
     return NextResponse.json(restaurant)
@@ -57,7 +59,8 @@ export async function GET() {
 }
 
 export async function PUT(
-  request: NextRequest
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -66,9 +69,19 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id: restaurantId } = await params
     const body = await request.json()
     const { name, description, address, phone, email, isActive } = body
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Validate required fields
     if (!name || name.trim().length === 0) {
@@ -78,47 +91,34 @@ export async function PUT(
       )
     }
 
-    // Update restaurant data in User model
-    const updatedUser = await prisma.user.update({
-      where: { id: session.user.id },
+    // Update restaurant data in Restaurant model
+    const restaurant = await prisma.restaurant.update({
+      where: { id: restaurantId },
       data: {
-        restaurantName: name.trim(),
-        restaurantDescription: description?.trim() || null,
-        restaurantAddress: address?.trim() || null,
-        restaurantPhone: phone?.trim() || null,
-        restaurantEmail: email?.trim() || null,
-        isRestaurantActive: Boolean(isActive)
+        name: name.trim(),
+        description: description?.trim() || null,
+        address: address?.trim() || null,
+        phone: phone?.trim() || null,
+        email: email?.trim() || null,
+        isActive: Boolean(isActive)
       },
       select: {
         id: true,
-        restaurantName: true,
-        restaurantDescription: true,
-        restaurantAddress: true,
-        restaurantPhone: true,
-        restaurantEmail: true,
-        isRestaurantActive: true,
+        name: true,
+        description: true,
+        address: true,
+        phone: true,
+        email: true,
+        isActive: true,
         createdAt: true,
         updatedAt: true
       }
     })
 
-    // Transform to match expected restaurant format
-    const restaurant = {
-      id: updatedUser.id,
-      name: updatedUser.restaurantName,
-      description: updatedUser.restaurantDescription,
-      address: updatedUser.restaurantAddress,
-      phone: updatedUser.restaurantPhone,
-      email: updatedUser.restaurantEmail,
-      isActive: updatedUser.isRestaurantActive,
-      createdAt: updatedUser.createdAt,
-      updatedAt: updatedUser.updatedAt
-    }
-
     return NextResponse.json(restaurant)
   } catch (error) {
     console.error('Error updating restaurant:', error)
-    
+
     if (error instanceof Error) {
       // Handle Prisma errors
       if (error.message.includes('Unique constraint')) {

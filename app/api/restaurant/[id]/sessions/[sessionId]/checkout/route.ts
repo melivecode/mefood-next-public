@@ -17,13 +17,22 @@ export async function PUT(
     }
 
     const { id: restaurantId, sessionId } = await params
-    
 
-    // Check if session exists and belongs to this user
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Check if session exists and belongs to this restaurant
     const customerSession = await prisma.customerSession.findUnique({
-      where: { 
+      where: {
         id: sessionId,
-        userId: session.user.id
+        restaurantId: restaurantId
       }
     })
 
@@ -33,9 +42,9 @@ export async function PUT(
 
     // Update the customer session to completed and set checkout time
     const updatedSession = await prisma.customerSession.update({
-      where: { 
+      where: {
         id: sessionId,
-        userId: session.user.id
+        restaurantId: restaurantId
       },
       data: {
         status: 'COMPLETED',
@@ -55,11 +64,11 @@ export async function PUT(
     return NextResponse.json(updatedSession)
   } catch (error) {
     console.error('Checkout session error:', error)
-    
+
     if (error instanceof Error && error.message.includes('Record to update not found')) {
       return NextResponse.json({ error: 'Customer session not found' }, { status: 404 })
     }
-    
+
     return NextResponse.json(
       { error: 'Failed to checkout customer session' },
       { status: 500 }

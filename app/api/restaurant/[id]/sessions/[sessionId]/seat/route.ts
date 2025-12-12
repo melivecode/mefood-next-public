@@ -17,9 +17,18 @@ export async function PUT(
 
     const { id: restaurantId, sessionId } = await params
     const body = await request.json()
-    
 
     const { tableId } = body
+
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     if (!tableId) {
       return NextResponse.json({ error: 'Table ID is required' }, { status: 400 })
@@ -27,10 +36,10 @@ export async function PUT(
 
     // Check if table exists and is available
     const table = await prisma.table.findFirst({
-      where: { 
-        id: tableId, 
-        userId: session.user.id, 
-        isActive: true 
+      where: {
+        id: tableId,
+        restaurantId: restaurantId,
+        isActive: true
       }
     })
 
@@ -54,9 +63,9 @@ export async function PUT(
 
     // Update the customer session (verify ownership)
     const updatedSession = await prisma.customerSession.update({
-      where: { 
+      where: {
         id: sessionId,
-        userId: session.user.id
+        restaurantId: restaurantId
       },
       data: {
         tableId,

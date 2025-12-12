@@ -7,23 +7,28 @@ declare module "next-auth" {
       name?: string | null
       email?: string | null
       image?: string | null
-      restaurantName: string
-      ownerName?: string | null
+      restaurantId?: string | null
+      restaurantName?: string | null
+      role: "ADMIN" | "STAFF"
     }
   }
 
   interface User {
     id: string
-    restaurantName: string
-    ownerName: string | null
-    ownerImage: string | null
+    name: string | null
+    image: string | null
+    restaurantId: string | null
+    restaurantName: string | null
+    role: "ADMIN" | "STAFF"
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     id: string
-    restaurantName: string
-    ownerName: string | null
+    name: string | null
+    restaurantId: string | null
+    restaurantName: string | null
+    role: "ADMIN" | "STAFF"
   }
 }

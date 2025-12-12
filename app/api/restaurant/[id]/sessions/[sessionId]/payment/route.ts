@@ -46,21 +46,30 @@ export async function PUT(
 
     const { id: restaurantId, sessionId } = await params
     const paymentData: PaymentData = await request.json()
-    
+
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Get session details with all related data for snapshot
     const customerSession = await prisma.customerSession.findUnique({
-      where: { 
+      where: {
         id: sessionId,
-        userId: session.user.id
+        restaurantId: restaurantId
       },
       include: {
-        user: {
+        restaurant: {
           select: {
             id: true,
-            restaurantName: true,
-            restaurantAddress: true,
-            restaurantPhone: true
+            name: true,
+            address: true,
+            phone: true
           }
         },
         table: {
@@ -96,7 +105,7 @@ export async function PUT(
 
     const paymentTime = new Date()
     const paymentNumber = generatePaymentNumber(restaurantId)
-    
+
     // Calculate extra charges total
     const extraChargesAmount = paymentData.extraCharges.reduce((total, charge) => {
       if (charge.isPercentage) {
@@ -110,8 +119,8 @@ export async function PUT(
       data: {
         paymentNumber,
         sessionId,
-        userId: session.user.id,
-        
+        restaurantId: restaurantId,
+
         // Session snapshot
         customerName: customerSession.customerName,
         customerPhone: customerSession.customerPhone,
@@ -121,12 +130,12 @@ export async function PUT(
         tableName: customerSession.table?.name,
         checkInTime: customerSession.checkInTime,
         checkOutTime: paymentTime, // Use payment time for now, can update when customer actually leaves
-        
+
         // Restaurant snapshot
-        restaurantName: customerSession.user.restaurantName || 'Restaurant',
-        restaurantAddress: customerSession.user.restaurantAddress || '',
-        restaurantPhone: customerSession.user.restaurantPhone || '',
-        
+        restaurantName: customerSession.restaurant?.name || 'Restaurant',
+        restaurantAddress: customerSession.restaurant?.address || '',
+        restaurantPhone: customerSession.restaurant?.phone || '',
+
         // Payment details
         paymentMethod: paymentData.paymentMethod.toUpperCase() as PaymentMethod,
         subtotalAmount: paymentData.totalAmount,
@@ -137,7 +146,7 @@ export async function PUT(
         changeAmount: paymentData.changeAmount,
         notes: paymentData.notes,
         extraCharges: paymentData.extraCharges as any,
-        
+
         // Create payment items with snapshot data
         items: {
           create: customerSession.orders.flatMap(order =>
@@ -163,9 +172,9 @@ export async function PUT(
     // Update the customer session to BILLING status (not COMPLETED yet)
     // Customer can stay at table after payment
     const updatedSession = await prisma.customerSession.update({
-      where: { 
+      where: {
         id: sessionId,
-        userId: session.user.id
+        restaurantId: restaurantId
       },
       data: {
         status: 'BILLING' // Keep as BILLING, don't complete yet
@@ -179,12 +188,12 @@ export async function PUT(
             name: true
           }
         },
-        user: {
+        restaurant: {
           select: {
             id: true,
-            restaurantName: true,
-            restaurantAddress: true,
-            restaurantPhone: true
+            name: true,
+            address: true,
+            phone: true
           }
         }
       }
@@ -197,11 +206,11 @@ export async function PUT(
     })
   } catch (error) {
     console.error('Complete session error:', error)
-    
+
     if (error instanceof Error && error.message.includes('Record to update not found')) {
       return NextResponse.json({ error: 'Customer session not found' }, { status: 404 })
     }
-    
+
     return NextResponse.json(
       { error: 'Failed to complete customer session' },
       { status: 500 }

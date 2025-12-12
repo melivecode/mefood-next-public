@@ -13,10 +13,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     // Get all customer sessions for the current user's restaurant
     const customerSessions = await prisma.customerSession.findMany({
-      where: { 
-        userId: session.user.id
+      where: {
+        restaurantId: user.restaurantId
       },
       include: {
         table: true,
@@ -50,6 +60,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const body = await request.json()
     const { customerName, customerPhone, customerEmail, partySize, notes } = body
 
@@ -62,7 +82,7 @@ export async function POST(request: NextRequest) {
         partySize: parseInt(partySize),
         notes,
         status: 'WAITING',
-        userId: session.user.id
+        restaurantId: user.restaurantId
       },
       include: {
         table: true

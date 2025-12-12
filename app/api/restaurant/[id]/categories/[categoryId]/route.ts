@@ -16,10 +16,19 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _, categoryId } = await params
+    const { id: restaurantId, categoryId } = await params
     const body = await request.json()
     const { name, description, isActive } = body
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Validate required fields
     if (!name || name.trim().length === 0) {
@@ -32,7 +41,7 @@ export async function PUT(
     // Check if category name already exists (excluding current category)
     const existingCategory = await prisma.category.findFirst({
       where: {
-        userId: session.user.id,
+        restaurantId: restaurantId,
         name: name.trim(),
         id: { not: categoryId }
       }
@@ -47,9 +56,9 @@ export async function PUT(
 
     // Update category (verify ownership)
     const updatedCategory = await prisma.category.update({
-      where: { 
+      where: {
         id: categoryId,
-        userId: session.user.id
+        restaurantId: restaurantId
       },
       data: {
         name: name.trim(),
@@ -66,11 +75,11 @@ export async function PUT(
     return NextResponse.json(updatedCategory)
   } catch (error) {
     console.error('Error updating category:', error)
-    
+
     if (error instanceof Error && error.message.includes('Record to update not found')) {
       return NextResponse.json({ error: 'Category not found' }, { status: 404 })
     }
-    
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -89,14 +98,23 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _, categoryId } = await params
+    const { id: restaurantId, categoryId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Check if category has menu items (verify ownership)
     const category = await prisma.category.findUnique({
-      where: { 
+      where: {
         id: categoryId,
-        userId: session.user.id
+        restaurantId: restaurantId
       },
       include: {
         _count: {
@@ -111,15 +129,15 @@ export async function DELETE(
 
     if (category._count.menuItems > 0) {
       return NextResponse.json(
-        { error: 'Cannot delete category with menu items' }, 
+        { error: 'Cannot delete category with menu items' },
         { status: 400 }
       )
     }
 
     await prisma.category.delete({
-      where: { 
+      where: {
         id: categoryId,
-        userId: session.user.id
+        restaurantId: restaurantId
       }
     })
 

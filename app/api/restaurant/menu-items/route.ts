@@ -13,8 +13,18 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const menuItems = await prisma.menuItem.findMany({
-      where: { userId: session.user.id },
+      where: { restaurantId: user.restaurantId },
       include: {
         category: true,
         selections: {
@@ -47,6 +57,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const body = await request.json()
     const { name, description, price, categoryId, image, isActive, isAvailable, sortOrder } = body
 
@@ -72,11 +92,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify category exists and belongs to user
+    // Verify category exists and belongs to user's restaurant
     const category = await prisma.category.findFirst({
-      where: { 
+      where: {
         id: categoryId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       }
     })
 
@@ -98,7 +118,7 @@ export async function POST(request: NextRequest) {
         isActive: Boolean(isActive ?? true),
         isAvailable: Boolean(isAvailable ?? true),
         sortOrder: Number(sortOrder) || 0,
-        userId: session.user.id
+        restaurantId: user.restaurantId
       },
       include: {
         category: true,

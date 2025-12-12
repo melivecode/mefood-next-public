@@ -16,10 +16,19 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _, orderId } = await params
+    const { id: restaurantId, orderId } = await params
     const body = await request.json()
     const { status } = body
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Validate status
     const validStatuses = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED']
@@ -32,9 +41,9 @@ export async function PATCH(
 
     // Update order status (verify ownership)
     const updatedOrder = await prisma.order.update({
-      where: { 
+      where: {
         id: orderId,
-        userId: session.user.id
+        restaurantId: restaurantId
       },
       data: { status },
       include: {
@@ -54,11 +63,11 @@ export async function PATCH(
     return NextResponse.json(updatedOrder)
   } catch (error) {
     console.error('Error updating order:', error)
-    
+
     if (error instanceof Error && error.message.includes('Record to update not found')) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
-    
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

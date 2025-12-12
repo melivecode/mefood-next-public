@@ -17,13 +17,22 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _ } = await params
+    const { id: restaurantId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
 
-    // Get all tables for the user
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Get all tables for the restaurant
     const tables = await prisma.table.findMany({
       where: {
-        userId: session.user.id
+        restaurantId: restaurantId
       },
       orderBy: [
         { sortOrder: 'asc' },
@@ -54,9 +63,17 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: _ } = await params
+    const { id: restaurantId } = await params
 
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
 
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     const body = await request.json()
     const { number, name, capacity, isActive, gridX, gridY, gridWidth, gridHeight, sortOrder } = body
@@ -69,11 +86,11 @@ export async function POST(
       return NextResponse.json({ error: 'Valid capacity is required' }, { status: 400 })
     }
 
-    // Check if table number already exists for this user
+    // Check if table number already exists for this restaurant
     const existingTable = await prisma.table.findUnique({
       where: {
-        userId_number: {
-          userId: session.user.id,
+        restaurantId_number: {
+          restaurantId: restaurantId,
           number: number.trim()
         }
       }
@@ -87,7 +104,7 @@ export async function POST(
     let tableSortOrder = sortOrder
     if (tableSortOrder === undefined) {
       const maxSortOrder = await prisma.table.findFirst({
-        where: { userId: session.user.id },
+        where: { restaurantId: restaurantId },
         orderBy: { sortOrder: 'desc' },
         select: { sortOrder: true }
       })
@@ -106,7 +123,7 @@ export async function POST(
         gridY: gridY ?? 0,
         gridWidth: gridWidth ?? 2,
         gridHeight: gridHeight ?? 2,
-        userId: session.user.id
+        restaurantId: restaurantId
       }
     })
 

@@ -8,43 +8,34 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: userId } = await params
+    const { id: restaurantId } = await params
 
-    // Verify user exists and restaurant is active
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { 
-        id: true, 
-        restaurantName: true, 
-        isRestaurantActive: true, 
-        restaurantDescription: true, 
-        restaurantAddress: true, 
-        restaurantPhone: true 
+    // Fetch restaurant info
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        address: true,
+        phone: true,
+        email: true,
+        isActive: true
       }
     })
 
-    if (!user) {
+    if (!restaurant) {
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
     }
 
-    if (!user.isRestaurantActive) {
+    if (!restaurant.isActive) {
       return NextResponse.json({ error: 'Restaurant is not active' }, { status: 403 })
-    }
-
-    // Transform user data to restaurant format for compatibility
-    const restaurant = {
-      id: user.id,
-      name: user.restaurantName,
-      isActive: user.isRestaurantActive,
-      description: user.restaurantDescription,
-      address: user.restaurantAddress,
-      phone: user.restaurantPhone
     }
 
     // Fetch menu items with category information for public menu display
     const menuItems = await prisma.menuItem.findMany({
-      where: { 
-        userId,
+      where: {
+        restaurantId,
         isActive: true,
         isAvailable: true // Only show available items to public
       },

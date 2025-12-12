@@ -13,6 +13,16 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const body = await request.json()
     const { tableIds } = body
 
@@ -24,18 +34,18 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Verify all tables exist and belong to user
+    // Verify all tables exist and belong to user's restaurant
     const tables = await prisma.table.findMany({
       where: {
         id: { in: tableIds },
-        userId: session.user.id
+        restaurantId: user.restaurantId
       },
       select: { id: true }
     })
 
     if (tables.length !== tableIds.length) {
       return NextResponse.json(
-        { error: 'One or more tables not found or do not belong to user' },
+        { error: 'One or more tables not found or do not belong to restaurant' },
         { status: 400 }
       )
     }
@@ -52,8 +62,8 @@ export async function PUT(request: NextRequest) {
 
     // Return updated tables
     const updatedTables = await prisma.table.findMany({
-      where: { 
-        userId: session.user.id,
+      where: {
+        restaurantId: user.restaurantId,
         isActive: true
       },
       orderBy: {

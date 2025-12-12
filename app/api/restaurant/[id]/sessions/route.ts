@@ -16,11 +16,20 @@ export async function GET(
     }
 
     const { id: restaurantId } = await params
-    
+
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     const customerSessions = await prisma.customerSession.findMany({
-      where: { 
-        userId: session.user.id,
+      where: {
+        restaurantId: restaurantId,
         status: {
           not: 'COMPLETED'
         }
@@ -59,9 +68,18 @@ export async function POST(
 
     const { id: restaurantId } = await params
     const body = await request.json()
-    
 
     const { customerName, customerPhone, customerEmail, partySize, notes } = body
+
+    // Get user's restaurant to verify access
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId || user.restaurantId !== restaurantId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     if (!partySize || partySize < 1) {
       return NextResponse.json({ error: 'Party size is required' }, { status: 400 })
@@ -74,7 +92,7 @@ export async function POST(
         customerEmail: customerEmail || null,
         partySize: parseInt(partySize),
         notes: notes || null,
-        userId: session.user.id,
+        restaurantId: restaurantId,
         status: 'WAITING'
       },
       include: {

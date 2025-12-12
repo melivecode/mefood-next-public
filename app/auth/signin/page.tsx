@@ -46,6 +46,13 @@ function SignInContent() {
       try {
         const response = await fetch('/api/check-user-exists');
         const data = await response.json();
+
+        // If no users exist, redirect to setup page
+        if (!data.userExists) {
+          router.push('/setup');
+          return;
+        }
+
         setRestaurantName(data.restaurantName);
       } catch (error) {
         setRestaurantName(null);
@@ -55,7 +62,7 @@ function SignInContent() {
     };
 
     checkUserExists();
-  }, []);
+  }, [router]);
 
   // Handle URL errors on component mount
   useEffect(() => {

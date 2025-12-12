@@ -238,30 +238,51 @@ export function Navbar({
           </Box>
           
           {/* Clock - Centered */}
-          <Box sx={{ 
+          <Box sx={{
             position: 'absolute',
             left: '50%',
             transform: 'translateX(-50%)',
-            display: 'flex', 
+            display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center'
           }}>
             {isClient && (
-              <Typography 
-                variant="h6" 
-                color="inherit" 
-                sx={{ 
-                  fontWeight: 600,
-                  fontSize: { xs: '1rem', md: '1.25rem' },
-                  fontFamily: 'monospace'
-                }}
-              >
-                {currentTime.toLocaleTimeString('en-US', {
-                  hour12: false,
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit'
-                })}
-              </Typography>
+              <>
+                <Typography
+                  variant="caption"
+                  color="inherit"
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: { xs: '0.75rem', md: '0.875rem' },
+                    opacity: 0.9,
+                    lineHeight: 1.2
+                  }}
+                >
+                  {currentTime.toLocaleDateString(i18n.language === 'th' ? 'th-TH' : 'en-US', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                    year: i18n.language === 'th' ? 'numeric' : undefined
+                  })}
+                </Typography>
+                <Typography
+                  variant="h6"
+                  color="inherit"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: { xs: '1rem', md: '1.25rem' },
+                    fontFamily: 'monospace',
+                    lineHeight: 1.2
+                  }}
+                >
+                  {currentTime.toLocaleTimeString('en-US', {
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                  })}
+                </Typography>
+              </>
             )}
           </Box>
           
@@ -287,21 +308,21 @@ export function Navbar({
               {!isMobile && (
                 <Box sx={{ textAlign: 'right' }}>
                   <Typography variant="body2" color="inherit" sx={{ fontWeight: 500 }}>
-                    {session.user?.ownerName || 'User'}
+                    {session.user?.name || 'User'}
                   </Typography>
                   <Typography variant="caption" color="inherit" sx={{ opacity: 0.8 }}>
                     {session.user?.restaurantName || 'Restaurant Owner'}
                   </Typography>
                 </Box>
               )}
-              
+
               <IconButton onClick={handleProfileClick} sx={{ p: 0 }}>
                 <Avatar
-                  alt={session.user?.ownerName || 'User'}
+                  alt={session.user?.name || 'User'}
                   src={session.user?.image || ''}
                   sx={{ width: 32, height: 32 }}
                 >
-                  {session.user?.ownerName?.charAt(0).toUpperCase() || 'U'}
+                  {session.user?.name?.charAt(0).toUpperCase() || 'U'}
                 </Avatar>
               </IconButton>
               
@@ -366,7 +387,7 @@ export function Navbar({
                   <ListItemText>{t('navbar.tables')}</ListItemText>
                 </MenuItem>
                 
-                <MenuItem onClick={() => handleMenuItemClick(`/menu/${session.user.id}`)}>
+                <MenuItem onClick={() => handleMenuItemClick(`/menu/${session.user.restaurantId}`)}>
                   <ListItemIcon>
                     <MenuBook fontSize="small" />
                   </ListItemIcon>
@@ -467,11 +488,11 @@ export function Navbar({
                   src={session.user?.image || ''}
                   sx={{ width: 40, height: 40, mr: 2 }}
                 >
-                  {session.user?.ownerName?.charAt(0).toUpperCase() || 'U'}
+                  {session.user?.name?.charAt(0).toUpperCase() || 'U'}
                 </Avatar>
                 <Box>
                   <Typography variant="subtitle1" color="text.primary">
-                    {session.user?.ownerName || 'User'}
+                    {session.user?.name || 'User'}
                   </Typography>
                   <Typography variant="body2" color="text.primary">
                     {session.user?.email}
@@ -533,7 +554,7 @@ export function Navbar({
                 </ListItem>
                 
                 <ListItem disablePadding>
-                  <ListItemButton onClick={() => handleMobileNavigation(`/menu/${session.user.id}`)}>
+                  <ListItemButton onClick={() => handleMobileNavigation(`/menu/${session.user.restaurantId}`)}>
                     <ListItemIcon>
                       <MenuBook />
                     </ListItemIcon>

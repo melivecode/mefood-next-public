@@ -16,13 +16,23 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const { orderId, itemId } = await params
 
-    // Verify order exists and belongs to user
+    // Verify order exists and belongs to user's restaurant
     const order = await prisma.order.findFirst({
-      where: { 
+      where: {
         id: orderId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       }
     })
 
@@ -66,15 +76,25 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const { orderId, itemId } = await params
     const body = await request.json()
     const { quantity, price, notes, selections } = body
 
-    // Verify order exists and belongs to user
+    // Verify order exists and belongs to user's restaurant
     const order = await prisma.order.findFirst({
-      where: { 
+      where: {
         id: orderId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       }
     })
 
@@ -141,13 +161,23 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get user's restaurant
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { restaurantId: true }
+    })
+
+    if (!user?.restaurantId) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
+    }
+
     const { orderId, itemId } = await params
 
-    // Verify order exists and belongs to user
+    // Verify order exists and belongs to user's restaurant
     const order = await prisma.order.findFirst({
-      where: { 
+      where: {
         id: orderId,
-        userId: session.user.id 
+        restaurantId: user.restaurantId
       }
     })
 
