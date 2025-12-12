@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 
 export type SetupStatus = {
   databaseConnected: boolean
@@ -18,11 +18,9 @@ export async function checkSetupStatus(): Promise<SetupStatus> {
     needsSetup: true
   }
 
-  const prisma = new PrismaClient()
-
   try {
-    // Test database connection
-    await prisma.$connect()
+    // Test database connection with a simple query
+    await prisma.$queryRaw`SELECT 1`
     status.databaseConnected = true
 
     // Check if tables exist by trying to query users
@@ -37,7 +35,7 @@ export async function checkSetupStatus(): Promise<SetupStatus> {
 
       // Setup is complete if we have at least one admin user
       status.needsSetup = !status.hasAdminUser
-    } catch (tableError) {
+    } catch {
       // Tables don't exist yet
       status.tablesExist = false
       status.needsSetup = true
@@ -46,8 +44,6 @@ export async function checkSetupStatus(): Promise<SetupStatus> {
     status.databaseConnected = false
     status.needsSetup = true
     status.error = error instanceof Error ? error.message : 'Unknown database error'
-  } finally {
-    await prisma.$disconnect()
   }
 
   return status

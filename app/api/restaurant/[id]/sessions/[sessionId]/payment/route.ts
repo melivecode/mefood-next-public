@@ -4,9 +4,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { PrismaClient, PaymentMethod } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { PaymentMethod } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 
 interface ExtraCharge {
   id: string
