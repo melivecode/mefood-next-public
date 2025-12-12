@@ -18,7 +18,6 @@ import {
   Step,
   StepLabel,
   CircularProgress,
-  LinearProgress,
   Card,
   CardContent,
   Chip
@@ -46,7 +45,8 @@ type SetupStatus = {
   error?: string
 }
 
-const steps = ['Database', 'Create Tables', 'Admin Account', 'Complete'];
+// Simplified steps for serverless (no "Create Tables" UI - must run locally)
+const steps = ['Database', 'Admin Account', 'Complete'];
 
 export default function Setup() {
   const { t } = useTranslation();
@@ -73,7 +73,6 @@ export default function Setup() {
   // Loading and error states
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [migrationProgress, setMigrationProgress] = useState(0);
 
   // Check setup status on mount
   useEffect(() => {
@@ -87,18 +86,18 @@ export default function Setup() {
       const data: SetupStatus = await response.json();
       setStatus(data);
 
-      // Determine which step to show
-      if (!data.databaseConnected) {
+      // Determine which step to show (simplified: Database → Admin → Complete)
+      if (!data.databaseConnected || !data.tablesExist) {
+        // Database not connected or tables not created
         setActiveStep(0);
-      } else if (!data.tablesExist) {
-        setActiveStep(1);
       } else if (!data.hasAdminUser) {
-        setActiveStep(2);
+        // Tables exist, need admin account
+        setActiveStep(1);
       } else {
         // Setup complete, redirect
         router.push('/auth/signin');
       }
-    } catch (err) {
+    } catch {
       setStatus({
         databaseConnected: false,
         tablesExist: false,
@@ -110,40 +109,6 @@ export default function Setup() {
       setActiveStep(0);
     } finally {
       setCheckingStatus(false);
-    }
-  };
-
-  const handleRunMigrations = async () => {
-    setLoading(true);
-    setError('');
-    setMigrationProgress(10);
-
-    try {
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setMigrationProgress((prev) => Math.min(prev + 10, 90));
-      }, 500);
-
-      const response = await fetch('/api/setup/migrate', {
-        method: 'POST'
-      });
-
-      clearInterval(progressInterval);
-      const data = await response.json();
-
-      if (data.success) {
-        setMigrationProgress(100);
-        // Recheck status and move to next step
-        await checkSetupStatus();
-      } else {
-        setError(data.error || 'Failed to create database tables');
-        setMigrationProgress(0);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Migration failed');
-      setMigrationProgress(0);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -180,7 +145,7 @@ export default function Setup() {
       const data = await response.json();
 
       if (data.success) {
-        setActiveStep(3); // Move to complete step
+        setActiveStep(2); // Move to complete step
 
         // Auto sign in
         const result = await signIn('credentials', {
@@ -249,22 +214,23 @@ export default function Setup() {
 
           {/* Step Content */}
           <Paper elevation={3} sx={{ p: 4 }}>
-            {/* Step 0: Database Connection */}
+            {/* Step 0: Database Connection & Tables */}
             {activeStep === 0 && (
               <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                   <DatabaseIcon sx={{ fontSize: 40, mr: 2, color: 'primary.main' }} />
                   <Box>
                     <Typography variant="h5" fontWeight={600}>
-                      Database Connection
+                      Database Setup
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Checking your database configuration
+                      Connect database and create tables
                     </Typography>
                   </Box>
                 </Box>
 
-                <Card variant="outlined" sx={{ mb: 3 }}>
+                {/* Connection Status */}
+                <Card variant="outlined" sx={{ mb: 2 }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -275,17 +241,15 @@ export default function Setup() {
                         )}
                         <Box>
                           <Typography variant="subtitle1" fontWeight={600}>
-                            MySQL Database
+                            Database Connection
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {status?.databaseConnected
-                              ? 'Connected successfully'
-                              : 'Not connected - check DATABASE_URL in .env'}
+                            {status?.databaseConnected ? 'Connected' : 'Not connected'}
                           </Typography>
                         </Box>
                       </Box>
                       <Chip
-                        label={status?.databaseConnected ? 'Connected' : 'Disconnected'}
+                        label={status?.databaseConnected ? 'OK' : 'Error'}
                         color={status?.databaseConnected ? 'success' : 'error'}
                         size="small"
                       />
@@ -293,19 +257,64 @@ export default function Setup() {
                   </CardContent>
                 </Card>
 
+                {/* Tables Status */}
+                <Card variant="outlined" sx={{ mb: 3 }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {status?.tablesExist ? (
+                          <CheckCircle sx={{ color: 'success.main', mr: 2 }} />
+                        ) : (
+                          <ErrorIcon sx={{ color: 'error.main', mr: 2 }} />
+                        )}
+                        <Box>
+                          <Typography variant="subtitle1" fontWeight={600}>
+                            Database Tables
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {status?.tablesExist ? 'Tables exist' : 'Tables not created'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      <Chip
+                        label={status?.tablesExist ? 'OK' : 'Missing'}
+                        color={status?.tablesExist ? 'success' : 'error'}
+                        size="small"
+                      />
+                    </Box>
+                  </CardContent>
+                </Card>
+
+                {/* Instructions based on what's missing */}
                 {!status?.databaseConnected && (
                   <Alert severity="warning" sx={{ mb: 3 }}>
                     <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                      Database not connected
+                      Configure DATABASE_URL
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 2 }}>
-                      Please configure your database connection in the <code>.env</code> file:
+                    <Typography variant="body2" component="ol" sx={{ pl: 2, mb: 2 }}>
+                      <li>Add <code>DATABASE_URL</code> environment variable</li>
+                      <li>Use a hosted MySQL database (PlanetScale, Railway, Aiven)</li>
+                      <li>Redeploy or restart the application</li>
                     </Typography>
                     <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', fontSize: '0.85rem' }}>
                       DATABASE_URL=&quot;mysql://USER:PASSWORD@HOST:PORT/DATABASE&quot;
                     </Paper>
-                    <Typography variant="body2" sx={{ mt: 2 }}>
-                      After updating the .env file, restart the application and refresh this page.
+                  </Alert>
+                )}
+
+                {status?.databaseConnected && !status?.tablesExist && (
+                  <Alert severity="warning" sx={{ mb: 3 }}>
+                    <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                      Create Database Tables
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2 }}>
+                      Run this command locally (with your production DATABASE_URL):
+                    </Typography>
+                    <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', fontSize: '0.85rem', mb: 2 }}>
+                      npx prisma db push
+                    </Paper>
+                    <Typography variant="body2">
+                      After running the migration, click &quot;Refresh&quot; to check.
                     </Typography>
                   </Alert>
                 )}
@@ -322,9 +331,9 @@ export default function Setup() {
                     startIcon={<Refresh />}
                     onClick={checkSetupStatus}
                   >
-                    Refresh Status
+                    Refresh
                   </Button>
-                  {status?.databaseConnected && (
+                  {status?.databaseConnected && status?.tablesExist && (
                     <Button
                       variant="contained"
                       onClick={() => setActiveStep(1)}
@@ -336,96 +345,8 @@ export default function Setup() {
               </Box>
             )}
 
-            {/* Step 1: Create Tables */}
+            {/* Step 1: Create Admin Account */}
             {activeStep === 1 && (
-              <Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <DatabaseIcon sx={{ fontSize: 40, mr: 2, color: 'primary.main' }} />
-                  <Box>
-                    <Typography variant="h5" fontWeight={600}>
-                      Create Database Tables
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Set up the required database schema
-                    </Typography>
-                  </Box>
-                </Box>
-
-                {/* Vercel/Serverless warning */}
-                {typeof window !== 'undefined' && window.location.hostname.includes('vercel') && (
-                  <Alert severity="warning" sx={{ mb: 3 }}>
-                    <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                      Running on Vercel
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 2 }}>
-                      Database migrations cannot be run from Vercel. Please run this command locally:
-                    </Typography>
-                    <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                      npx prisma db push
-                    </Paper>
-                    <Typography variant="body2" sx={{ mt: 2 }}>
-                      After running the migration, click &quot;Check Tables&quot; to verify.
-                    </Typography>
-                  </Alert>
-                )}
-
-                <Alert severity="info" sx={{ mb: 3 }}>
-                  <Typography variant="body2">
-                    This will create all necessary database tables for MeFood. This operation is safe and will not affect existing data.
-                  </Typography>
-                </Alert>
-
-                {migrationProgress > 0 && migrationProgress < 100 && (
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      Creating tables... {migrationProgress}%
-                    </Typography>
-                    <LinearProgress variant="determinate" value={migrationProgress} />
-                  </Box>
-                )}
-
-                {migrationProgress === 100 && (
-                  <Alert severity="success" sx={{ mb: 3 }}>
-                    Database tables created successfully!
-                  </Alert>
-                )}
-
-                {error && (
-                  <Alert severity="error" sx={{ mb: 3 }}>
-                    {error}
-                  </Alert>
-                )}
-
-                <Stack direction="row" spacing={2}>
-                  <Button
-                    variant="outlined"
-                    onClick={() => setActiveStep(0)}
-                    disabled={loading}
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Refresh />}
-                    onClick={checkSetupStatus}
-                    disabled={loading}
-                  >
-                    Check Tables
-                  </Button>
-                  <Button
-                    variant="contained"
-                    onClick={handleRunMigrations}
-                    disabled={loading}
-                    startIcon={loading && <CircularProgress size={20} />}
-                  >
-                    {loading ? 'Creating Tables...' : 'Create Tables'}
-                  </Button>
-                </Stack>
-              </Box>
-            )}
-
-            {/* Step 2: Create Admin Account */}
-            {activeStep === 2 && (
               <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                   <Person sx={{ fontSize: 40, mr: 2, color: 'primary.main' }} />
@@ -543,7 +464,7 @@ export default function Setup() {
                   <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
                     <Button
                       variant="outlined"
-                      onClick={() => setActiveStep(1)}
+                      onClick={() => setActiveStep(0)}
                       disabled={loading}
                     >
                       Back
@@ -561,8 +482,8 @@ export default function Setup() {
               </Box>
             )}
 
-            {/* Step 3: Complete */}
-            {activeStep === 3 && (
+            {/* Step 2: Complete */}
+            {activeStep === 2 && (
               <Box sx={{ textAlign: 'center', py: 4 }}>
                 <CheckCircle sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
                 <Typography variant="h4" fontWeight={700} gutterBottom>
