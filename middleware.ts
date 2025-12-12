@@ -13,9 +13,21 @@ const ADMIN_ONLY_ROUTES = [
   "/restaurant-admin"
 ]
 
+// Public routes that don't require authentication
+const PUBLIC_ROUTES = [
+  "/setup",
+  "/api/setup"
+]
+
 export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request })
   const { pathname } = request.nextUrl
+
+  // Allow public routes without authentication (including setup)
+  const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route))
+  if (isPublicRoute) {
+    return NextResponse.next()
+  }
 
   // Check if the route is protected
   const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route))
@@ -42,6 +54,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|auth|unauthorized).*)",
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|auth|unauthorized).*)",
   ],
 }
