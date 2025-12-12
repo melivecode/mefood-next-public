@@ -351,6 +351,24 @@ export default function Setup() {
                   </Box>
                 </Box>
 
+                {/* Vercel/Serverless warning */}
+                {typeof window !== 'undefined' && window.location.hostname.includes('vercel') && (
+                  <Alert severity="warning" sx={{ mb: 3 }}>
+                    <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                      Running on Vercel
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2 }}>
+                      Database migrations cannot be run from Vercel. Please run this command locally:
+                    </Typography>
+                    <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                      npx prisma db push
+                    </Paper>
+                    <Typography variant="body2" sx={{ mt: 2 }}>
+                      After running the migration, click &quot;Check Tables&quot; to verify.
+                    </Typography>
+                  </Alert>
+                )}
+
                 <Alert severity="info" sx={{ mb: 3 }}>
                   <Typography variant="body2">
                     This will create all necessary database tables for MeFood. This operation is safe and will not affect existing data.
@@ -385,6 +403,14 @@ export default function Setup() {
                     disabled={loading}
                   >
                     Back
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Refresh />}
+                    onClick={checkSetupStatus}
+                    disabled={loading}
+                  >
+                    Check Tables
                   </Button>
                   <Button
                     variant="contained"
